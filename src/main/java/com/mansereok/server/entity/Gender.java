@@ -1,13 +1,14 @@
-package com.mansereok.entity;
+package com.mansereok.server.entity;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Getter
-public enum CalendarType {
-	SOLAR_CALENDAR("양력"),
-	LUNAR_CALENDAR("음력");
+public enum Gender {
+
+	MALE("남자"),
+	FEMALE("여자");
 
 	private final String description;
 }

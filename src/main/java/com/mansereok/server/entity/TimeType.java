@@ -1,4 +1,4 @@
-package com.mansereok.entity;
+package com.mansereok.server.entity;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

@@ -1,0 +1,42 @@
+package com.mansereok.server.service.request;
+
+import lombok.Data;
+
+@Data
+
+public class PostellerApiRequest {
+
+	private String name;            //
+	private String gender;          // "M" (M/F)
+	private String calendar;        // "S" (S=양력, L=음력)
+	private String birthday;        // "YYYY/MM/DD"
+	private String birthtime;       // "12:00"
+	private boolean hmUnsure;       // 시간 모름 or 야자시/조자시
+	private int day;               // 2
+	private int hour;              // 12
+	private int locationId;        // 1835847
+	private String locationName;   // " 서울특별시, 대한민국"
+	private boolean midnightAdjust;// 자정 보정 기능
+	private int min;               // 분
+	private int month;             // 월
+	private int year;              // 생년월일
+
+	public static PostellerApiRequest from(PersonaInfoCreateRequest request) {
+		PostellerApiRequest apiRequest = new PostellerApiRequest();
+		apiRequest.name = request.getName();
+		apiRequest.gender = request.getGender();
+		apiRequest.calendar = request.getCalendar();
+		apiRequest.birthday = request.getBirthday();
+		apiRequest.birthtime = request.getBirthtime();
+		apiRequest.hmUnsure = request.isHmUnsure();
+		apiRequest.day = request.getDay();
+		apiRequest.hour = request.getHour();
+		apiRequest.locationId = request.getLocationId();
+		apiRequest.locationName = request.getLocationName();
+		apiRequest.midnightAdjust = request.isMidnightAdjust();
+		apiRequest.min = request.getMin();
+		apiRequest.month = request.getMonth();
+		apiRequest.year = request.getYear();
+		return apiRequest;
+	}
+}
