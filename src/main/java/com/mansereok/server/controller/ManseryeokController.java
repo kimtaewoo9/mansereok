@@ -37,6 +37,4 @@ public class ManseryeokController {
 
 		return ResponseEntity.ok(response);
 	}
-
-
 }

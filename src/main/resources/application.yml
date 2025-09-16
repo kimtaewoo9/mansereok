@@ -20,13 +20,19 @@ spring:
   jackson:
     property-naming-strategy: SNAKE_CASE
 
-# OpenAI API ??
+# OpenAI API
 openai:
   api:
     key: ${OPENAI_API_KEY}
     base-url: https://api.openai.com
 
-# ???? API ??
+# Gemini API
+gemini:
+  api:
+    key: ${GEMINI_API_KEY}
+    base-url: https://generativelanguage.googleapis.com/v1beta/models
+
+# 만세력 불러올 API
 posteller:
   api:
     base-url: https://api.forceteller.com
