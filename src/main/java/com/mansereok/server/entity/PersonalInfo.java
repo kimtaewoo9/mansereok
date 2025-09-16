@@ -1,5 +1,6 @@
 package com.mansereok.server.entity;
 
+import com.mansereok.server.service.request.ManseryeokCreateRequest;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -44,15 +45,17 @@ public class PersonalInfo {
 	// 생성 시간
 	private LocalDateTime createdAt;
 
-	public static PersonalInfo create(String name, Gender gender, String birthDate,
-		String birthTime, boolean isTimeUnknown, String city) {
+	public static PersonalInfo from(ManseryeokCreateRequest request) {
 		PersonalInfo personalInfo = new PersonalInfo();
-		personalInfo.name = name;
-		personalInfo.gender = gender;
-		personalInfo.birthDate = birthDate;
-		personalInfo.birthTime = birthTime;
-		personalInfo.isTimeUnknown = isTimeUnknown;
-		personalInfo.city = city;
+		personalInfo.name = request.getName();
+		personalInfo.gender = Gender.fromCode(request.getGender());
+		personalInfo.birthDate = request.getBirthday();
+		personalInfo.birthTime = request.getBirthtime();
+		personalInfo.isTimeUnknown = request.isHmUnsure();
+		personalInfo.calendarType = CalendarType.fromCode(request.getCalendar());
+		personalInfo.city = request.getLocationName().trim(); // 공백 제거
+		personalInfo.locationId = String.valueOf(request.getLocationId());
+		personalInfo.midnightAdjust = request.isMidnightAdjust();
 		personalInfo.createdAt = LocalDateTime.now();
 		return personalInfo;
 	}
