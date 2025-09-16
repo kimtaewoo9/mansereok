@@ -1,17 +1,24 @@
 package com.mansereok.server.service.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.mansereok.server.service.response.model.Element;
+import com.mansereok.server.service.response.model.JijangganInfo;
+import com.mansereok.server.service.response.model.UnseongInfo;
 import java.util.List;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
 public class DaeunCreateResponse {
 
 	private int status;
 	private SajuData data;
 
 	@Data
+	@NoArgsConstructor
 	public static class SajuData {
 
 		@JsonProperty("_대운수")
@@ -31,6 +38,7 @@ public class DaeunCreateResponse {
 	}
 
 	@Data
+	@NoArgsConstructor
 	public static class DaeunInfo {
 
 		@JsonProperty("_간지")
@@ -42,6 +50,7 @@ public class DaeunCreateResponse {
 	}
 
 	@Data
+	@NoArgsConstructor
 	public static class YeonunInfo {
 
 		@JsonProperty("_간지")
@@ -53,6 +62,7 @@ public class DaeunCreateResponse {
 	}
 
 	@Data
+	@NoArgsConstructor
 	public static class WolunInfo {
 
 		@JsonProperty("_간지")
@@ -63,14 +73,15 @@ public class DaeunCreateResponse {
 		private int month;
 	}
 
+	// GanjiInfo는 이제 Element를 직접 사용합니다.
 	@Data
+	@NoArgsConstructor
 	public static class GanjiInfo {
 
 		@JsonProperty("_천간")
-		private CheonganInfo cheongan;
-
+		private Element cheongan; // 공통 Element 참조
 		@JsonProperty("_지지")
-		private JijiInfo jiji;
+		private Element jiji;     // 공통 Element 참조
 
 		@JsonProperty("_지장간")
 		private List<JijangganInfo> jijangganList;
@@ -80,80 +91,20 @@ public class DaeunCreateResponse {
 	}
 
 	@Data
-	public static class CheonganInfo {
+	@Builder
+	@NoArgsConstructor
+	@AllArgsConstructor
+	public static class OhaengAnalysis { // 내부 클래스로 유지
 
-		private int id;
-		private String name;
-		private String chinese;
-
-		@JsonProperty("_음양")
-		private EumyangInfo eumyang;
-
-		@JsonProperty("_오행")
-		private OhaengInfo ohaeng;
-
-		@JsonProperty("_십성")
-		private SipseongInfo sipseong;
+		private int wood;
+		private int fire;
+		private int earth;
+		private int metal;
+		private int water;
+		private String dominantElement;
+		private String weakElement;
 	}
 
-	@Data
-	public static class JijiInfo {
-
-		private int id;
-		private String name;
-		private String chinese;
-
-		@JsonProperty("_음양")
-		private EumyangInfo eumyang;
-
-		@JsonProperty("_오행")
-		private OhaengInfo ohaeng;
-
-		@JsonProperty("_십성")
-		private SipseongInfo sipseong;
-	}
-
-	@Data
-	public static class JijangganInfo {
-
-		private int id;
-		private String name;
-		private String chinese;
-	}
-
-	@Data
-	public static class UnseongInfo {
-
-		private int id;
-		private String name;
-		private String chinese;
-	}
-
-	@Data
-	public static class EumyangInfo {
-
-		private int id;
-		private String name;
-		private String chinese;
-	}
-
-	@Data
-	public static class OhaengInfo {
-
-		private int id;
-		private String name;
-		private String chinese;
-	}
-
-	@Data
-	public static class SipseongInfo {
-
-		private int id;
-		private String name;
-		private String chinese;
-	}
-
-	// 편의 메서드들 추가
 	public static class SajuDataUtils {
 
 		// 현재 대운 정보 조회
@@ -180,14 +131,15 @@ public class DaeunCreateResponse {
 				.orElse(null);
 		}
 
-		// 오행 분석
+		// 오행 분석 (Element.getOhaeng().getName() 참조 방식 변경)
 		public static OhaengAnalysis analyzeOhaeng(SajuData sajuData) {
 			int wood = 0, fire = 0, earth = 0, metal = 0, water = 0;
 
 			// 대운의 오행 카운트
 			for (DaeunInfo daeun : sajuData.getDaeunList()) {
-				String element = daeun.getGanji().getCheongan().getOhaeng().getName();
-				switch (element) {
+				// Element 클래스의 getOhaeng() 메서드를 직접 호출합니다.
+				String elementOhaengName = daeun.getGanji().getCheongan().getOhaeng().getName();
+				switch (elementOhaengName) {
 					case "목" -> wood++;
 					case "화" -> fire++;
 					case "토" -> earth++;
@@ -278,18 +230,5 @@ public class DaeunCreateResponse {
 				default -> "안정";
 			};
 		}
-	}
-
-	@Data
-	@Builder
-	public static class OhaengAnalysis {
-
-		private int wood;
-		private int fire;
-		private int earth;
-		private int metal;
-		private int water;
-		private String dominantElement;
-		private String weakElement;
 	}
 }

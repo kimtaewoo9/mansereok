@@ -1,6 +1,7 @@
 package com.mansereok.server.service.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.mansereok.server.service.response.model.Element;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -29,7 +30,7 @@ public class OhaengCreateResponse {
 		@AllArgsConstructor
 		public static class ElementInfo {
 
-			private Element element;
+			private Element element; // 공통 Element 참조
 			private double point;
 			private double percent;
 			private String description;
