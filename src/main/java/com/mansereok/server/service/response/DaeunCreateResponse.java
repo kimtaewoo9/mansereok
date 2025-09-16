@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 
 @Data
-public class ManseryeokCreateResponse {
+public class DaeunCreateResponse {
 
 	private int status;
 	private SajuData data;
