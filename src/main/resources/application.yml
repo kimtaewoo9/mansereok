@@ -37,6 +37,16 @@ posteller:
   api:
     base-url: https://api.forceteller.com
 
-# ?? ??
+# swagger
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+
 server:
   port: 8080
