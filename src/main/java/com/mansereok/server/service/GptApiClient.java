@@ -6,8 +6,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mansereok.server.dto.GptRequest;
 import com.mansereok.server.dto.Message;
 import com.mansereok.server.service.request.ManseryeokCreateRequest;
-import com.mansereok.server.service.response.ManseryeokCreateResponse;
+import com.mansereok.server.service.response.ChartCreateResponse;
+import com.mansereok.server.service.response.DaeunCreateResponse;
+import com.mansereok.server.service.response.OhaengCreateResponse;
+import com.mansereok.server.service.response.model.JijangganInfo;
 import java.util.List;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -32,10 +36,19 @@ public class GptApiClient {
 			.build();
 	}
 
-	public String interpret(ManseryeokCreateResponse response, ManseryeokCreateRequest request) {
-		log.info("GPT 사주 해석 요청: name={}", request.getName());
+	public String interpret(
+		DaeunCreateResponse daeunResponse,
+		ChartCreateResponse chartResponse,
+		OhaengCreateResponse ohaengResponse,
+		ManseryeokCreateRequest request
+	) {
+		log.info("✅ 사주 해석 요청, 요청한 사람: {}", request.getName());
 		try {
-			String prompt = createPrompt(response, request);
+			String prompt = createPrompt(
+				daeunResponse,
+				chartResponse,
+				ohaengResponse,
+				request);
 
 			GptRequest gptRequest = new GptRequest(
 				"gpt-4o",
@@ -67,88 +80,240 @@ public class GptApiClient {
 		}
 	}
 
-	private String createPrompt(ManseryeokCreateResponse response,
+	private String createPrompt(
+		DaeunCreateResponse daeunResponse,
+		ChartCreateResponse chartResponse,
+		OhaengCreateResponse ohaengResponse,
 		ManseryeokCreateRequest request) {
-		var data = response.getData();
-		var currentDaeun = ManseryeokCreateResponse.SajuDataUtils.getCurrentDaeun(data);
-		var currentYear = ManseryeokCreateResponse.SajuDataUtils.getCurrentYearFortune(data);
-		var currentMonth = ManseryeokCreateResponse.SajuDataUtils.getCurrentMonthFortune(data);
-		var ohaengAnalysis = ManseryeokCreateResponse.SajuDataUtils.analyzeOhaeng(data);
+
+		DaeunCreateResponse.SajuData daeunData = Optional.ofNullable(daeunResponse.getData())
+			.orElseThrow(() -> new IllegalArgumentException("DaeunCreateResponse data is null"));
+		DaeunCreateResponse.DaeunInfo currentDaeun = DaeunCreateResponse.SajuDataUtils.getCurrentDaeun(
+			daeunData);
+		DaeunCreateResponse.YeonunInfo currentYear = DaeunCreateResponse.SajuDataUtils.getCurrentYearFortune(
+			daeunData);
+		DaeunCreateResponse.WolunInfo currentMonth = DaeunCreateResponse.SajuDataUtils.getCurrentMonthFortune(
+			daeunData);
+		DaeunCreateResponse.OhaengAnalysis calculatedOhaengAnalysis = DaeunCreateResponse.SajuDataUtils.analyzeOhaeng(
+			daeunData);
+
+		ChartCreateResponse.BasicChartData chartData = Optional.ofNullable(chartResponse.getData())
+			.orElseThrow(() -> new IllegalArgumentException("ChartCreateResponse data is null"));
+		ChartCreateResponse.BasicChartData.SajuChart sajuChart = chartData.getSajuChart();
+		ChartCreateResponse.BasicChartData.SinsalInfo sinsalInfo = chartData.getSinsal();
+		ChartCreateResponse.BasicChartData.ProfileInfo profile = chartData.getProfile();
+
+		OhaengCreateResponse.AnalysisData ohaengAnalysisData = Optional.ofNullable(
+				ohaengResponse.getData())
+			.orElseThrow(() -> new IllegalArgumentException("OhaengCreateResponse data is null"));
+		List<OhaengCreateResponse.AnalysisData.ElementInfo> ohaengElements = ohaengAnalysisData.getOhaeng();
+		List<OhaengCreateResponse.AnalysisData.ElementInfo> sipseongElements = ohaengAnalysisData.getSipseong();
 
 		StringBuilder prompt = new StringBuilder();
 
 		prompt.append("다음은 사주팔자 정보입니다.\n\n");
 		prompt.append(String.format("이름: %s, 성별: %s\n", request.getName(), request.getGender()));
+		prompt.append(String.format("생년월일(양력): %s, 출생지역: %s\n", profile.getSunBirth(),
+			profile.getLocation()));
+		prompt.append(String.format("사주명식: %s\n\n", profile.getSexagenaryCycle()));
 
 		prompt.append("【사주팔자】\n");
-		prompt.append("\n");
-		
-		prompt.append("【현재 대운 정보】\n");
-		prompt.append("- 대운 간지: ").append(data.getDaeunGanji()).append("\n");
-		prompt.append("- 대운 순서: ").append(data.getDaeunNumber()).append("번째\n");
-		if (currentDaeun != null) {
-			prompt.append("- 천간: ").append(currentDaeun.getGanji().getCheongan().getName())
-				.append(" (").append(currentDaeun.getGanji().getCheongan().getChinese())
-				.append(")\n");
-			prompt.append("- 지지: ").append(currentDaeun.getGanji().getJiji().getName())
-				.append(" (").append(currentDaeun.getGanji().getJiji().getChinese()).append(")\n");
-			prompt.append("- 십성: ")
-				.append(currentDaeun.getGanji().getCheongan().getSipseong().getName()).append("\n");
-			prompt.append("- 운성: ").append(currentDaeun.getGanji().getUnseong().getName())
-				.append("\n");
-			prompt.append("- 오행: ")
-				.append(currentDaeun.getGanji().getCheongan().getOhaeng().getName()).append("\n");
-		}
-		prompt.append("\n");
+		appendPillarInfo(prompt, "년주", sajuChart.getYearPillar());
+		appendPillarInfo(prompt, "월주", sajuChart.getMonthPillar());
 
-		if (currentYear != null) {
-			prompt.append("【현재 연운 (").append(currentYear.getYear()).append("년)】\n");
-			prompt.append("- 간지: ").append(
-					ManseryeokCreateResponse.SajuDataUtils.getGanjiString(currentYear.getGanji()))
-				.append("\n");
-			prompt.append("- 십성: ")
-				.append(currentYear.getGanji().getCheongan().getSipseong().getName()).append("\n");
-			prompt.append("- 운성: ").append(currentYear.getGanji().getUnseong().getName())
-				.append("\n\n");
+		// 일주 (일간 강조)
+		prompt.append(String.format("일주: %s%s (일간: %s %s, 오행: %s, 음양: %s)\n",
+			sajuChart.getDayPillar().getCheongan().getName(),
+			sajuChart.getDayPillar().getJiji().getName(),
+			sajuChart.getDayPillar().getCheongan().getName(),
+			sajuChart.getDayPillar().getCheongan().getChinese(),
+			sajuChart.getDayPillar().getCheongan().getOhaeng().getName(),
+			sajuChart.getDayPillar().getCheongan().getEumyang().getName()
+		));
+		appendJijangganInfo(prompt, sajuChart.getDayPillar().getJijangganList());
+		if (sajuChart.getDayPillar().getUnseong() != null) {
+			prompt.append(String.format("  - 운성: %s (%s)\n",
+				sajuChart.getDayPillar().getUnseong().getName(),
+				sajuChart.getDayPillar().getUnseong().getChinese()
+			));
+		} else {
+			prompt.append("  - 운성: 정보 없음\n");
 		}
 
-		if (currentMonth != null) {
-			prompt.append("【현재 월운 (").append(currentMonth.getMonth()).append("월)】\n");
-			prompt.append("- 간지: ").append(
-					ManseryeokCreateResponse.SajuDataUtils.getGanjiString(currentMonth.getGanji()))
-				.append("\n");
-			prompt.append("- 십성: ")
-				.append(currentMonth.getGanji().getCheongan().getSipseong().getName()).append("\n");
-			prompt.append("- 운성: ").append(currentMonth.getGanji().getUnseong().getName())
-				.append("\n\n");
-		}
+		appendPillarInfo(prompt, "시주", sajuChart.getTimePillar());
+		prompt.append("\n");
+
+		prompt.append("【신살 분석】\n");
+		appendSinsalInfo(prompt, "년주", sinsalInfo.getYearSinsal());
+		appendSinsalInfo(prompt, "월주", sinsalInfo.getMonthSinsal());
+		appendSinsalInfo(prompt, "일진", sinsalInfo.getDaySinsal());
+		appendSinsalInfo(prompt, "시진", sinsalInfo.getTimeSinsal());
+		prompt.append("\n");
 
 		prompt.append("【오행 분석】\n");
-		prompt.append("- 목: ").append(ohaengAnalysis.getWood()).append("개\n");
-		prompt.append("- 화: ").append(ohaengAnalysis.getFire()).append("개\n");
-		prompt.append("- 토: ").append(ohaengAnalysis.getEarth()).append("개\n");
-		prompt.append("- 금: ").append(ohaengAnalysis.getMetal()).append("개\n");
-		prompt.append("- 수: ").append(ohaengAnalysis.getWater()).append("개\n");
-		prompt.append("- 가장 강한 오행: ").append(ohaengAnalysis.getDominantElement()).append("\n");
-		prompt.append("- 가장 약한 오행: ").append(ohaengAnalysis.getWeakElement()).append("\n\n");
+		if (ohaengElements != null && !ohaengElements.isEmpty()) {
+			for (OhaengCreateResponse.AnalysisData.ElementInfo ohaengInfo : ohaengElements) {
+				prompt.append(String.format("- %s: %.1f점 (%.1f%%) - %s\n",
+					ohaengInfo.getElement().getName(),
+					ohaengInfo.getPoint(),
+					ohaengInfo.getPercent(),
+					ohaengInfo.getDescription()
+				));
+			}
+			prompt.append("- 가장 강한 오행: ").append(calculatedOhaengAnalysis.getDominantElement())
+				.append("\n");
+			prompt.append("- 가장 약한 오행: ").append(calculatedOhaengAnalysis.getWeakElement())
+				.append("\n");
+		} else {
+			prompt.append("- 오행 분석 정보가 없습니다.\n");
+		}
+		prompt.append("\n");
 
-		prompt.append("【주요 대운 흐름】\n");
-		data.getDaeunList().stream().limit(5).forEach(daeun -> {
-			prompt.append("- ").append(daeun.getAge()).append("세: ")
-				.append(ManseryeokCreateResponse.SajuDataUtils.getGanjiString(daeun.getGanji()))
-				.append(" (").append(daeun.getGanji().getUnseong().getName()).append(")\n");
+		prompt.append("【십성 분석】\n");
+		if (sipseongElements != null && !sipseongElements.isEmpty()) {
+			for (OhaengCreateResponse.AnalysisData.ElementInfo sipseongInfo : sipseongElements) {
+				prompt.append(String.format("- %s: %.1f점 (%.1f%%) - %s\n",
+					sipseongInfo.getElement().getName(),
+					sipseongInfo.getPoint(),
+					sipseongInfo.getPercent(),
+					sipseongInfo.getDescription()
+				));
+			}
+		} else {
+			prompt.append("- 십성 분석 정보가 없습니다.\n");
+		}
+		prompt.append("\n");
+
+		prompt.append("【현재 대운 정보】\n");
+		prompt.append("- 대운수: ").append(daeunData.getDaeunNumber()).append("\n");
+		prompt.append("- 대운 간지: ").append(daeunData.getDaeunGanji()).append("\n");
+		if (currentDaeun != null && currentDaeun.getGanji() != null) {
+			prompt.append("- 현재 대운 (").append(currentDaeun.getAge()).append("세): ")
+				.append(DaeunCreateResponse.SajuDataUtils.getGanjiString(currentDaeun.getGanji()))
+				.append(" (").append(currentDaeun.getGanji().getUnseong().getName()).append(")\n");
+			prompt.append("  - 천간: ").append(currentDaeun.getGanji().getCheongan().getName())
+				.append(" (").append(currentDaeun.getGanji().getCheongan().getChinese())
+				.append("), 오행: ")
+				.append(currentDaeun.getGanji().getCheongan().getOhaeng().getName())
+				.append(", 십성: ")
+				.append(currentDaeun.getGanji().getCheongan().getSipseong().getName())
+				.append(", 음양: ")
+				.append(currentDaeun.getGanji().getCheongan().getEumyang().getName()).append("\n");
+			prompt.append("  - 지지: ").append(currentDaeun.getGanji().getJiji().getName())
+				.append(" (").append(currentDaeun.getGanji().getJiji().getChinese())
+				.append("), 오행: ").append(currentDaeun.getGanji().getJiji().getOhaeng().getName())
+				.append(", 십성: ").append(currentDaeun.getGanji().getJiji().getSipseong().getName())
+				.append(", 음양: ").append(currentDaeun.getGanji().getJiji().getEumyang().getName())
+				.append("\n");
+			appendJijangganInfo(prompt, currentDaeun.getGanji().getJijangganList());
+		}
+		prompt.append("\n");
+
+		if (currentYear != null && currentYear.getGanji() != null) {
+			prompt.append("【현재 연운 (").append(currentYear.getYear()).append("년)】\n");
+			prompt.append("- 간지: ").append(
+					DaeunCreateResponse.SajuDataUtils.getGanjiString(currentYear.getGanji()))
+				.append("\n");
+			prompt.append("- 천간 십성: ")
+				.append(currentYear.getGanji().getCheongan().getSipseong().getName()).append("\n");
+			prompt.append("- 지지 운성: ").append(currentYear.getGanji().getUnseong().getName())
+				.append("\n");
+			appendJijangganInfo(prompt, currentYear.getGanji().getJijangganList());
+			prompt.append("\n");
+		}
+
+		if (currentMonth != null && currentMonth.getGanji() != null) {
+			prompt.append("【현재 월운 (").append(currentMonth.getMonth()).append("월)】\n");
+			prompt.append("- 간지: ").append(
+					DaeunCreateResponse.SajuDataUtils.getGanjiString(currentMonth.getGanji()))
+				.append("\n");
+			prompt.append("- 천간 십성: ")
+				.append(currentMonth.getGanji().getCheongan().getSipseong().getName()).append("\n");
+			prompt.append("- 지지 운성: ").append(currentMonth.getGanji().getUnseong().getName())
+				.append("\n");
+			appendJijangganInfo(prompt, currentMonth.getGanji().getJijangganList());
+			prompt.append("\n");
+		}
+
+		prompt.append("【주요 대운 흐름 (총 ").append(daeunData.getDaeunList().size()).append("개 대운)】\n");
+		daeunData.getDaeunList().forEach(daeun -> {
+			if (daeun != null && daeun.getGanji() != null) {
+				prompt.append("- ").append(daeun.getAge()).append("세 (").append(daeun.getYear())
+					.append("년): ")
+					.append(DaeunCreateResponse.SajuDataUtils.getGanjiString(daeun.getGanji()))
+					.append(" (").append(daeun.getGanji().getUnseong().getName()).append(")\n");
+			}
 		});
 		prompt.append("\n");
 
 		prompt.append("위 정보를 바탕으로 다음 5개 항목에 대해 상세히 해석해주세요:\n\n");
-		prompt.append("## 1. 성격 및 기본 성향\n");
-		prompt.append("## 2. 현재 대운의 특징과 기회\n");
-		prompt.append("## 3. 현재 시기 운세 (올해/이번달)\n");
-		prompt.append("## 4. 인생 전반적 흐름과 전망\n");
-		prompt.append("## 5. 실용적 조언 및 개선 방안\n\n");
-		prompt.append("각 항목을 명확히 구분하여 작성하고, 구체적이고 실용적인 조언을 포함해주세요.");
+		prompt.append("## 1. 성격 및 기본 성향 (일간, 사주팔자 오행 및 십성 특징 포함)\n");
+		prompt.append("## 2. 현재 대운의 특징과 기회 (현재 대운 간지, 십성, 운성 및 주요 신살 영향)\n");
+		prompt.append("## 3. 현재 시기 운세 (올해/이번달 연운/월운의 간지, 십성, 운성 영향)\n");
+		prompt.append("## 4. 인생 전반적 흐름과 전망 (전체 대운 흐름, 사주 원국의 강약, 용신/희신 추론)\n");
+		prompt.append("## 5. 실용적 조언 및 개선 방안 (오행의 균형, 십성의 활용, 신살의 길흉 조절 방안)\n\n");
+		prompt.append(
+			"각 항목을 명확히 구분하여 작성하고, 사주명리학적 용어를 적절히 사용하되 일반인이 이해하기 쉽게 설명해주세요. 구체적이고 실용적인 조언을 포함해주세요.");
 
 		return prompt.toString();
+	}
+
+	// 각 기둥 정보 (천간, 지지, 오행, 음양, 지장간, 운성)를 추가하는 헬퍼 메서드
+	private void appendPillarInfo(StringBuilder prompt, String pillarName,
+		ChartCreateResponse.BasicChartData.Pillar pillar) {
+		if (pillar != null && pillar.getCheongan() != null && pillar.getJiji() != null) {
+			prompt.append(String.format("%s: %s%s (천간: %s %s, 지지: %s %s)\n",
+				pillarName,
+				pillar.getCheongan().getName(),
+				pillar.getJiji().getName(),
+				pillar.getCheongan().getName(),
+				pillar.getCheongan().getOhaeng().getName(),
+				pillar.getJiji().getName(),
+				pillar.getJiji().getOhaeng().getName()
+			));
+
+			// Pillar 클래스에서 지장간 리스트를 직접 가져옵니다.
+			appendJijangganInfo(prompt, pillar.getJijangganList());
+
+			// Pillar 클래스에서 운성 정보를 직접 가져옵니다.
+			if (pillar.getUnseong() != null) {
+				prompt.append(String.format("  - 운성: %s (%s)\n",
+					pillar.getUnseong().getName(),
+					pillar.getUnseong().getChinese()
+				));
+			} else {
+				prompt.append("  - 운성: 정보 없음\n");
+			}
+		} else {
+			prompt.append(String.format("%s: 정보 없음\n", pillarName));
+		}
+	}
+
+	// 지장간 정보를 추가하는 헬퍼 메서드 (공통 JijangganInfo 클래스 사용)
+	private void appendJijangganInfo(StringBuilder prompt, List<JijangganInfo> jijangganList) {
+		if (jijangganList != null && !jijangganList.isEmpty()) {
+			prompt.append("  - 지장간: ");
+			for (int i = 0; i < jijangganList.size(); i++) {
+				prompt.append(jijangganList.get(i).getName());
+				if (i < jijangganList.size() - 1) {
+					prompt.append(", ");
+				}
+			}
+			prompt.append("\n");
+		}
+	}
+
+	// 신살 정보를 추가하는 헬퍼 메서드
+	private void appendSinsalInfo(StringBuilder prompt, String pillarName,
+		ChartCreateResponse.BasicChartData.SinsalElement sinsalElement) {
+		if (sinsalElement != null && sinsalElement.getName() != null && !sinsalElement.getName()
+			.isEmpty()) {
+			prompt.append(String.format("- %s 신살: %s (%s)\n",
+				pillarName,
+				sinsalElement.getName(),
+				sinsalElement.getChinese()
+			));
+		}
 	}
 
 	private String extractContentFromResponse(String jsonResponse) throws JsonProcessingException {
