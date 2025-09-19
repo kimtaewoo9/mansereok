@@ -99,8 +99,6 @@ public class GeminiApiClient {
 			daeunData);
 		DaeunCreateResponse.WolunInfo currentMonth = DaeunCreateResponse.SajuDataUtils.getCurrentMonthFortune(
 			daeunData);
-		DaeunCreateResponse.OhaengAnalysis calculatedOhaengAnalysis = DaeunCreateResponse.SajuDataUtils.analyzeOhaeng(
-			daeunData);
 
 		ChartCreateResponse.BasicChartData chartData = Optional.ofNullable(chartResponse.getData())
 			.orElseThrow(() -> new IllegalArgumentException("ChartCreateResponse data is null"));
@@ -168,14 +166,10 @@ public class GeminiApiClient {
 					ohaengInfo.getDescription()
 				));
 			}
-			prompt.append("- 가장 강한 오행: ").append(calculatedOhaengAnalysis.getDominantElement())
-				.append("\n");
-			prompt.append("- 가장 약한 오행: ").append(calculatedOhaengAnalysis.getWeakElement())
-				.append("\n");
+			prompt.append("\n");
 		} else {
 			prompt.append("- 오행 분석 정보가 없습니다.\n");
 		}
-		prompt.append("\n");
 
 		prompt.append("【십성 분석】\n");
 		if (sipseongElements != null && !sipseongElements.isEmpty()) {
@@ -187,10 +181,10 @@ public class GeminiApiClient {
 					sipseongInfo.getDescription()
 				));
 			}
+			prompt.append("\n");
 		} else {
 			prompt.append("- 십성 분석 정보가 없습니다.\n");
 		}
-		prompt.append("\n");
 
 		prompt.append("【현재 대운 정보】\n");
 		prompt.append("- 대운수: ").append(daeunData.getDaeunNumber()).append("\n");

@@ -94,8 +94,6 @@ public class GptApiClient {
 			daeunData);
 		DaeunCreateResponse.WolunInfo currentMonth = DaeunCreateResponse.SajuDataUtils.getCurrentMonthFortune(
 			daeunData);
-		DaeunCreateResponse.OhaengAnalysis calculatedOhaengAnalysis = DaeunCreateResponse.SajuDataUtils.analyzeOhaeng(
-			daeunData);
 
 		ChartCreateResponse.BasicChartData chartData = Optional.ofNullable(chartResponse.getData())
 			.orElseThrow(() -> new IllegalArgumentException("ChartCreateResponse data is null"));
@@ -110,6 +108,9 @@ public class GptApiClient {
 		List<OhaengCreateResponse.AnalysisData.ElementInfo> sipseongElements = ohaengAnalysisData.getSipseong();
 
 		StringBuilder prompt = new StringBuilder();
+
+		prompt.append("당신은 30년 경력의 전문 사주명리학자입니다. 주어진 사주팔자 정보를 바탕으로 정확하고 건설적인 해석을 제공해주세요. ");
+		prompt.append("부정적인 내용도 포함하되 극복 방안을 함께 제시하고, 운명론적이기보다는 개인의 노력과 선택의 중요성을 강조해주세요.\n\n");
 
 		prompt.append("다음은 사주팔자 정보입니다.\n\n");
 		prompt.append(String.format("이름: %s, 성별: %s\n", request.getName(), request.getGender()));
@@ -160,14 +161,10 @@ public class GptApiClient {
 					ohaengInfo.getDescription()
 				));
 			}
-			prompt.append("- 가장 강한 오행: ").append(calculatedOhaengAnalysis.getDominantElement())
-				.append("\n");
-			prompt.append("- 가장 약한 오행: ").append(calculatedOhaengAnalysis.getWeakElement())
-				.append("\n");
+			prompt.append("\n");
 		} else {
 			prompt.append("- 오행 분석 정보가 없습니다.\n");
 		}
-		prompt.append("\n");
 
 		prompt.append("【십성 분석】\n");
 		if (sipseongElements != null && !sipseongElements.isEmpty()) {
@@ -179,10 +176,10 @@ public class GptApiClient {
 					sipseongInfo.getDescription()
 				));
 			}
+			prompt.append("\n");
 		} else {
 			prompt.append("- 십성 분석 정보가 없습니다.\n");
 		}
-		prompt.append("\n");
 
 		prompt.append("【현재 대운 정보】\n");
 		prompt.append("- 대운수: ").append(daeunData.getDaeunNumber()).append("\n");
