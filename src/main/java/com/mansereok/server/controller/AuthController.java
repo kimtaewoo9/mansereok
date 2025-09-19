@@ -68,6 +68,17 @@ public class AuthController {
 			// 인증 성공 시 사용자 정보 조회
 			User user = ((CustomUserDetailsService.CustomUserPrincipal) authentication.getPrincipal()).getUser();
 
+			// 새로운 로그인 시 기존 모든 리프레시 토큰 무효화 및 새 토큰 생성
+			RefreshToken refreshToken = refreshTokenService.generateRefreshToken(user);
+
+			// refresh 토큰을 쿠키에 저장
+			Cookie refreshCookie = new Cookie("REFRESH_TOKEN", refreshToken.getToken());
+			refreshCookie.setHttpOnly(true);
+			refreshCookie.setSecure(false);
+			refreshCookie.setPath("/");
+			refreshCookie.setMaxAge(7 * 24 * 60 * 60); // 7일
+			response.addCookie(refreshCookie);
+
 			// JWT Access Token 생성 (사용자 정보 포함)
 			// 1. Claims 생성
 			Map<String, Object> claims = Map.of(
@@ -78,15 +89,6 @@ public class AuthController {
 
 			// 2. accessToken 생성 .
 			String accessToken = jwtUtil.generateAccessToken(user.getUsername(), claims);
-
-			// 3. refreshToken 생성
-			RefreshToken newRefreshToken = refreshTokenService.generateRefreshToken(user);
-			Cookie cookie = new Cookie("REFRESH_TOKEN", newRefreshToken.getToken());
-			cookie.setHttpOnly(true);
-			cookie.setSecure(false); // HTTPS 환경에서만 true로 설정
-			cookie.setPath("/");
-			cookie.setMaxAge(7 * 24 * 60 * 60); // 7일
-			response.addCookie(cookie);
 
 			// 성공 응답 생성
 			Map<String, Object> responseBody = Map.of(
@@ -170,10 +172,8 @@ public class AuthController {
 		String newAccessToken = jwtUtil.generateAccessToken(user.getUsername(), claims);
 
 		// 새로운 refresh token 생성 ..(토큰 회전)
+		// 기존 토큰은 그대로 유지하여 여러 기기에서 동시 로그인이 가능하도록 합니다.
 		RefreshToken newRefreshToken = refreshTokenService.generateRefreshToken(user);
-
-		// 기존 토큰 무효화 + 새로운 refresh token 저장 .
-		refreshTokenService.save(refreshToken);
 
 		// refresh 토큰은 쿠키에 저장해서 전달 .
 		Cookie refreshCookie = new Cookie("REFRESH_TOKEN", newRefreshToken.getToken());
