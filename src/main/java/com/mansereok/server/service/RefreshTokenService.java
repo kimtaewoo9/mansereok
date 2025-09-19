@@ -1,4 +1,4 @@
-package com.mansereok.server.security;
+package com.mansereok.server.service;
 
 import com.mansereok.server.config.JwtProperties;
 import com.mansereok.server.entity.RefreshToken;
