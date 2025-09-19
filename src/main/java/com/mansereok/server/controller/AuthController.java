@@ -47,7 +47,9 @@ public class AuthController {
 	 * @return Access Token과 Refresh Token
 	 */
 	@PostMapping("/api/auth/sign-in")
-	public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
+	public ResponseEntity<?> login(
+		@Valid @RequestBody LoginRequest loginRequest,
+		HttpServletResponse response) {
 		try {
 			// 1. UserPasswordAuthenticationToken 생성 .
 			// 2. AuthenticationManager 가 이를 받아서 검증 ..
@@ -77,8 +79,17 @@ public class AuthController {
 			// 2. accessToken 생성 .
 			String accessToken = jwtUtil.generateAccessToken(user.getUsername(), claims);
 
+			// 3. refreshToken 생성
+			RefreshToken newRefreshToken = refreshTokenService.generateRefreshToken(user);
+			Cookie cookie = new Cookie("REFRESH_TOKEN", newRefreshToken.getToken());
+			cookie.setHttpOnly(true);
+			cookie.setSecure(false); // HTTPS 환경에서만 true로 설정
+			cookie.setPath("/");
+			cookie.setMaxAge(7 * 24 * 60 * 60); // 7일
+			response.addCookie(cookie);
+
 			// 성공 응답 생성
-			Map<String, Object> response = Map.of(
+			Map<String, Object> responseBody = Map.of(
 				"accessToken", accessToken,
 				"type", "Bearer",
 				"user", Map.of(
@@ -88,7 +99,7 @@ public class AuthController {
 				)
 			);
 
-			return ResponseEntity.ok(response);
+			return ResponseEntity.ok(responseBody);
 
 		} catch (BadCredentialsException e) {
 			return ResponseEntity.badRequest()
@@ -162,7 +173,6 @@ public class AuthController {
 		RefreshToken newRefreshToken = refreshTokenService.generateRefreshToken(user);
 
 		// 기존 토큰 무효화 + 새로운 refresh token 저장 .
-		refreshToken.setRevoked(true);
 		refreshTokenService.save(refreshToken);
 
 		// refresh 토큰은 쿠키에 저장해서 전달 .
