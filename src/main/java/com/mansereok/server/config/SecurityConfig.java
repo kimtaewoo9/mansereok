@@ -89,20 +89,21 @@ public class SecurityConfig {
 		CorsConfiguration configuration = new CorsConfiguration();
 
 		// 허용할 도메인 설정
-		configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+		configuration.setAllowedOrigins(
+			Arrays.asList(
+				"http://localhost:3000",
+				"https://yourdomain.com" // 도메인 생성 후 변경 예정
+			)
+		);
 
 		// 허용할 HTTP 메서드
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
 		// 허용할 헤더
 		configuration.setAllowedHeaders(Arrays.asList("*"));
-
 		// 자격증명 허용 (쿠키, Authorization 헤더 등)
 		configuration.setAllowCredentials(true);
-
 		// 브라우저에서 접근할 수 있는 응답 헤더
 		configuration.setExposedHeaders(Arrays.asList("Authorization"));
-
 		// preflight 요청 캐시 시간 (초)
 		configuration.setMaxAge(3600L);
 
