@@ -39,7 +39,7 @@ public class ManseryeokService {
 	}
 
 	public ManseryeokInterpretationResponse createInterpretation(ManseryeokCreateRequest request) {
-		save(request);
+		PersonalInfo savedPersonalInfo = save(request);
 
 		DaeunCreateResponse daeunResponse = getDaeun(request);// 대운 API 호출
 		ChartCreateResponse chartResponse = getChart(request);// 사주 기본 차트 API 호출
@@ -60,7 +60,7 @@ public class ManseryeokService {
 			request);
 
 		return ManseryeokInterpretationResponse.builder()
-			.personalInfo(PersonalInfo.from(request))
+			.personalInfo(savedPersonalInfo)
 			.interpretation(interpretation)
 			.build();
 	}
