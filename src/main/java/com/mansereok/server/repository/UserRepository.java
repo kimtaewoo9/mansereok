@@ -13,8 +13,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
 	Optional<User> findByEmail(String email);
 
+	// 회원가입 되어있는지 확인.
+	Optional<User> findBySocialId(String socialId);
+
 	// 회원가입 시 중복 체크용
 	boolean existsByUsername(String username);
 
 	boolean existsByEmail(String email);
+
 }

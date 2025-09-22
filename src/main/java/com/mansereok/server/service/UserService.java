@@ -1,6 +1,7 @@
 package com.mansereok.server.service;
 
 import com.mansereok.server.entity.Role;
+import com.mansereok.server.entity.SocialType;
 import com.mansereok.server.entity.User;
 import com.mansereok.server.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -47,5 +48,24 @@ public class UserService {
 	public User findByUsername(String username) {
 		return userRepository.findByUsername(username)
 			.orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + username));
+	}
+
+	public User getUserBySocialId(String socialId) {
+		return userRepository.findBySocialId(socialId)
+			.orElse(null);
+	}
+
+	// Oauth를 통한 회원가입 !.
+	public User registerWithOauth(String username, String email, String name,
+		String sub, SocialType socialType) {
+		return userRepository.save(
+			User.create(
+				sub,
+				name, // 사용자 이름
+				email,
+				sub, // socialId
+				socialType
+			)
+		);
 	}
 }

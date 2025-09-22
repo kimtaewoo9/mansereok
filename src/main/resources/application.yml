@@ -16,8 +16,41 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_OAUTH_CLIENT_ID}
+            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET}
+            scope: openid, email, profile
+            redirect-uri: http://localhost:8080/login/oauth2/code/google
+            authorization-grant-type: authorization_code
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
+            user-name-attribute: sub
+
+oauth:
+  # google
+  google:
+    client-id: ${GOOGLE_OAUTH_CLIENT_ID}
+    client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET}
+    redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI} # 나중에 실제 서비스 uri로 바꿔야함 .
+    # redirect-uri: http://localhost:3000/oauth/google/redirect
+  # naver
+
+  # kakao
+  kakao:
+    client-id: ${KAKAO_OAUTH_CLIENT_ID}
+    redirect-uri: ${KAKAO_OAUTH_REDIRECT_URI}
+    # redirect-uri: http://localhost:3000/oauth/kakao/redirect
   jackson:
     property-naming-strategy: SNAKE_CASE
+
+  # X(트위터)
 
 # OpenAI API
 openai:

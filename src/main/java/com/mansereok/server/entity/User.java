@@ -1,5 +1,6 @@
 package com.mansereok.server.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -24,12 +25,17 @@ public class User {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-	private String username;
+	private String username; // 사용자 아이디
+	private String name; // 사용자 본명
 	private String password;
+	@Column(nullable = false)
 	private String email;
 	@Enumerated(EnumType.STRING)
 	private Role role = Role.USER;
 	private boolean enabled = true; // 계정 활성화 상태 .
+	// Oauth
+	private SocialType socialType;
+	private String socialId;
 
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
@@ -42,6 +48,19 @@ public class User {
 		this.enabled = enabled;
 		this.createdAt = LocalDateTime.now();
 		this.updatedAt = LocalDateTime.now();
+	}
+
+	public static User create(String username, String name, String email, String socialId,
+		SocialType socialType) {
+		User user = new User();
+		user.username = username; // 아이디
+		user.name = name; // 이름
+		user.email = email;
+		user.createdAt = LocalDateTime.now();
+		user.updatedAt = LocalDateTime.now();
+		user.socialId = socialId;
+		user.socialType = socialType;
+		return user;
 	}
 
 	@PreUpdate // 엔티티 업데이트 될때마다 자동으로 updateAt 필드를 현재시간으로 설정 .

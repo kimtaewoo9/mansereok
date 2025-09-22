@@ -58,6 +58,8 @@ public class AuthController {
 			// 5. 성공 Authentication 객체 반환 .
 
 			// Spring Security의 AuthenticationManager를 통한 인증
+			// Spring Security 가 UserDetailService 사용해서 사용자 정보 가져와서 비밀번호 검증함 .
+			// 성공하면 인증된 Authentication 객체 반환 !. 인증 실패하면 AuthenticationException 발생시킴 .
 			Authentication authentication = authenticationManager.authenticate(
 				new UsernamePasswordAuthenticationToken(
 					loginRequest.getUsername(),
@@ -67,17 +69,6 @@ public class AuthController {
 
 			// 인증 성공 시 사용자 정보 조회
 			User user = ((CustomUserDetailsService.CustomUserPrincipal) authentication.getPrincipal()).getUser();
-
-			// 새로운 로그인 시 기존 모든 리프레시 토큰 무효화 및 새 토큰 생성
-			RefreshToken refreshToken = refreshTokenService.generateRefreshToken(user);
-
-			// refresh 토큰을 쿠키에 저장
-			Cookie refreshCookie = new Cookie("REFRESH_TOKEN", refreshToken.getToken());
-			refreshCookie.setHttpOnly(true);
-			refreshCookie.setSecure(false);
-			refreshCookie.setPath("/");
-			refreshCookie.setMaxAge(7 * 24 * 60 * 60); // 7일
-			response.addCookie(refreshCookie);
 
 			// JWT Access Token 생성 (사용자 정보 포함)
 			// 1. Claims 생성
@@ -100,6 +91,17 @@ public class AuthController {
 					"role", user.getRole().name()
 				)
 			);
+
+			// 새로운 로그인 시 기존 모든 리프레시 토큰 무효화 및 새 토큰 생성
+			RefreshToken refreshToken = refreshTokenService.generateRefreshToken(user);
+
+			// refresh 토큰을 쿠키에 저장
+			Cookie refreshCookie = new Cookie("REFRESH_TOKEN", refreshToken.getToken());
+			refreshCookie.setHttpOnly(true);
+			refreshCookie.setSecure(false);
+			refreshCookie.setPath("/");
+			refreshCookie.setMaxAge(7 * 24 * 60 * 60); // 7일
+			response.addCookie(refreshCookie);
 
 			return ResponseEntity.ok(responseBody);
 
