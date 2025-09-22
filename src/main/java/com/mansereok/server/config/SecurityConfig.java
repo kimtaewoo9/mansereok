@@ -66,8 +66,8 @@ public class SecurityConfig {
 				// 일반 사용자 이상 권한 경로
 				.requestMatchers("/api/user/**").hasAnyRole("ADMIN", "MANAGER", "USER")
 
-				// 나머지 모든 요청은 인증 필요
-				.anyRequest().authenticated())
+				// 일단 모든 요청 인증 x
+				.anyRequest().permitAll())
 
 			// JWT 인증 예외 처리
 			.exceptionHandling(ex -> ex

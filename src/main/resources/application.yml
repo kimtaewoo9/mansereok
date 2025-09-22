@@ -34,22 +34,25 @@ spring:
             user-name-attribute: sub
 
 oauth:
-  # google
   google:
     client-id: ${GOOGLE_OAUTH_CLIENT_ID}
     client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET}
     redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI} # 나중에 실제 서비스 uri로 바꿔야함 .
-    # redirect-uri: http://localhost:3000/oauth/google/redirect
-  # naver
-
-  # kakao
   kakao:
     client-id: ${KAKAO_OAUTH_CLIENT_ID}
     redirect-uri: ${KAKAO_OAUTH_REDIRECT_URI}
-    # redirect-uri: http://localhost:3000/oauth/kakao/redirect
-  jackson:
-    property-naming-strategy: SNAKE_CASE
-
+  naver:
+    client_id: ${NAVER_CLIENT_ID}
+    client_secret: ${NAVER_CLIENT_SECRET}
+  X:
+    client_id: ${X_CLIENT_ID}
+    client_secret: ${X_CLIENT_SECRET}
+    redirect_uri: ${}
+  discord:
+    client_id: ${DISCORD_CLIENT_ID}
+    client_secret: ${DISCORD_CLIENT_SECRET}
+    redirect_uri: ${DISCORD_OAUTH_REDIRECT_URI}
+  
   # X(트위터)
 
 # OpenAI API
