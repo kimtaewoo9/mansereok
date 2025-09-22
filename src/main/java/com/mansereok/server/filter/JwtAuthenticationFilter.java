@@ -7,6 +7,7 @@ import com.mansereok.server.exception.JwtTokenMalformedException;
 import com.mansereok.server.exception.JwtTokenMissingException;
 import com.mansereok.server.exception.JwtUnsupportedException;
 import com.mansereok.server.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
@@ -81,29 +82,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	private void validateAndProcessToken(String jwtToken, HttpServletRequest request) {
 		try {
-			// 토큰 유효성 검증 (verifyWith)
-			if (!jwtUtil.validateToken(jwtToken)) {
-				throw new JwtAuthenticationException("유효하지 않은 JWT 토큰 입니다.", 401,
-					"JWT_TOKEN_INVALID");
-			}
+			// 검증 + 추출 .. 만약에 검증 실패하면 오류뜸 .
+			Claims claims = jwtUtil.extractAllClaims(jwtToken);
 
-			String username = jwtUtil.extractUsername(jwtToken);
-			String role = jwtUtil.extractRole(jwtToken);
+			String username = claims.getSubject();
+			String role = claims.get("role", String.class);
+
 			if (username != null
 				&& SecurityContextHolder.getContext().getAuthentication() == null) {
-				// JWT 토큰에서 권한 정보 추출하여 사용자 권한 정보 넣어주기 .
-				List<GrantedAuthority> authorities = Collections.singletonList(
-					new SimpleGrantedAuthority(role)
-				);
+				List<GrantedAuthority> authorities =
+					Collections.singletonList(new SimpleGrantedAuthority(role));
 
-				// 인증 객체 생성 . 이름, 비밀번호, 권한 정보
 				UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
 					username, null, authorities);
 
 				authentication.setDetails(
 					new WebAuthenticationDetailsSource().buildDetails(request));
 
-				// SecurityContextHolder에 인증 정보 설정 ..
 				SecurityContextHolder.getContext().setAuthentication(authentication);
 			}
 		} catch (ExpiredJwtException e) {
