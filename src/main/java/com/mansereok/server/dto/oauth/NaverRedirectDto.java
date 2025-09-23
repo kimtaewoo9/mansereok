@@ -1,4 +1,4 @@
-package com.mansereok.server.dto;
+package com.mansereok.server.dto.oauth;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,7 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RedirectDto {
+public class NaverRedirectDto {
 
 	private String code;
+	private String state;
 }

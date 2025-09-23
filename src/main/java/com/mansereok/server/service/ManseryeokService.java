@@ -52,7 +52,7 @@ public class ManseryeokService {
 //			ohaengResponse,
 //			request);
 
-		log.info("🚀GPT 해석 시작");
+		log.info("🚀 GPT 해석 시작");
 		String interpretation = gptApiClient.interpret(
 			daeunResponse,
 			chartResponse,

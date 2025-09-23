@@ -1,4 +1,4 @@
-package com.mansereok.server.dto;
+package com.mansereok.server.dto.oauth;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;

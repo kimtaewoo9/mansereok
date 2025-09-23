@@ -1,6 +1,5 @@
 package com.mansereok.server.entity;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -28,7 +27,6 @@ public class User {
 	private String username; // 사용자 아이디
 	private String name; // 사용자 본명
 	private String password;
-	@Column(nullable = false)
 	private String email;
 	@Enumerated(EnumType.STRING)
 	private Role role = Role.USER;
@@ -43,7 +41,7 @@ public class User {
 	public User(String username, String password, String email, Role role, boolean enabled) {
 		this.username = username;
 		this.password = password;
-		this.email = email;
+		this.email = email; // 이메일 정보 강제 ..해야함
 		this.role = role;
 		this.enabled = enabled;
 		this.createdAt = LocalDateTime.now();

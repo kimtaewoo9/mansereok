@@ -18,8 +18,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -37,11 +35,13 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
+			.csrf(csrf -> csrf.disable()) // 일단 비활성화 .
+
 			// CSRF 설정
-			.csrf(csrf -> csrf
-				.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-				.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-			)
+//			.csrf(csrf -> csrf
+//				.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+//				.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+//			)
 
 			// CORS 설정 적용
 			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -52,22 +52,18 @@ public class SecurityConfig {
 
 			// 인증이 필요한 경로 설정
 			.authorizeHttpRequests(auth -> auth
-				// 인증 불필요 경로
-				.requestMatchers("/api/auth/**").permitAll()
-				.requestMatchers("/api/public/**").permitAll()
-				.requestMatchers("/h2-console/**").permitAll()
+					// 특정 경로를 먼저 허용
+					.requestMatchers("/api/auth/**").permitAll()
+					.requestMatchers("/api/public/**").permitAll()
+					.requestMatchers("/h2-console/**").permitAll()
 
-				// 관리자 전용 경로
-				.requestMatchers("/api/admin/**").hasRole("ADMIN")
+					// 일단 모든 요청을 인증 없이 허용
+					.anyRequest().permitAll()
 
-				// 매니저 이상 권한 경로
-				.requestMatchers("/api/manager/**").hasAnyRole("ADMIN", "MANAGER")
-
-				// 일반 사용자 이상 권한 경로
-				.requestMatchers("/api/user/**").hasAnyRole("ADMIN", "MANAGER", "USER")
-
-				// 일단 모든 요청 인증 x
-				.anyRequest().permitAll())
+				// .requestMatchers("/api/admin/**").hasRole("ADMIN")
+				// .requestMatchers("/api/manager/**").hasAnyRole("ADMIN", "MANAGER")
+				// .requestMatchers("/api/user/**").hasAnyRole("ADMIN", "MANAGER", "USER")
+			)
 
 			// JWT 인증 예외 처리
 			.exceptionHandling(ex -> ex

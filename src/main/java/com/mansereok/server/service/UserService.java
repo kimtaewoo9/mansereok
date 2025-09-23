@@ -60,7 +60,7 @@ public class UserService {
 		String sub, SocialType socialType) {
 		return userRepository.save(
 			User.create(
-				sub,
+				sub, // id 로 social id 를 사용함 .
 				name, // 사용자 이름
 				email,
 				sub, // socialId

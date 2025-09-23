@@ -1,7 +1,7 @@
-package com.mansereok.server.service;
+package com.mansereok.server.service.oauth;
 
 import com.mansereok.server.dto.AccessTokenDto;
-import com.mansereok.server.dto.GoogleProfileDto;
+import com.mansereok.server.dto.oauth.GoogleProfileDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,10 +25,10 @@ public class GoogleService {
 	@Value("${oauth.google.redirect-uri")
 	private String googleRedirectUri;
 
+	private final RestClient restClient;
+
 	// code -> 인가 코드 .. 프론트엔드에서 인가코드 전달해주면 google에 access token 요청 .
 	public AccessTokenDto getAccessToken(String code) {
-		RestClient restClient = RestClient.create();
-
 		// form-data 형식 .. MultiValueMap 을 통해 자동으로 form-data 형식으로 body 조립 가능 .
 		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
 		params.add("code", code);
@@ -52,7 +52,6 @@ public class GoogleService {
 
 	// profile 받을때는 access token 만 있으면 됨 .
 	public GoogleProfileDto getGoogleProfile(String accessToken) {
-		RestClient restClient = RestClient.create();
 		ResponseEntity<GoogleProfileDto> response = restClient.get()
 			.uri("https://openidconnect.googleapis.com/v1/userinfo")
 			.header("Authorization", "Bearer " + accessToken)

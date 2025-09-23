@@ -1,7 +1,7 @@
-package com.mansereok.server.service;
+package com.mansereok.server.service.oauth;
 
 import com.mansereok.server.dto.AccessTokenDto;
-import com.mansereok.server.dto.KakaoProfileDto;
+import com.mansereok.server.dto.oauth.KakaoProfileDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,8 +22,9 @@ public class KakaoService {
 	@Value("${oauth.kakao.redirect-uri}")
 	private String kakaoRedirectUri;
 
+	private final RestClient restClient;
+
 	public AccessTokenDto getAccessTokenDto(String code) {
-		RestClient restClient = RestClient.create();
 
 		// 인가코드, client_id, redirect_uri, grant_type
 		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
@@ -45,7 +46,6 @@ public class KakaoService {
 	}
 
 	public KakaoProfileDto getKakaoProfileDto(String accessToken) {
-		RestClient restClient = RestClient.create();
 		ResponseEntity<KakaoProfileDto> response = restClient.get()
 			.uri("https://kapi.kakao.com/v2/user/me")
 			.header("Authorization", "Bearer " + accessToken)
