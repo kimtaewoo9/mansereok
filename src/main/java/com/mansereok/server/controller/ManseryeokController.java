@@ -1,6 +1,6 @@
 package com.mansereok.server.controller;
 
-import com.mansereok.server.service.ManseryeokService;
+import com.mansereok.server.service.PostellerService;
 import com.mansereok.server.service.request.ManseryeokCreateRequest;
 import com.mansereok.server.service.response.ChartCreateResponse;
 import com.mansereok.server.service.response.DaeunCreateResponse;
@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "만세력 API", description = "사주팔자 분석 및 해석 API")
 public class ManseryeokController {
 
-	private final ManseryeokService manseryeokService;
+	private final PostellerService manseryeokService;
 
 	@Operation(
 		summary = "사주 해석 생성",
