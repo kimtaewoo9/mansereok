@@ -16,7 +16,7 @@ import org.springframework.web.client.RestClient;
 @Slf4j
 public class KakaoService {
 
-	@Value("${oauth.kakao.client-id")
+	@Value("${oauth.kakao.client-id}")
 	private String kakaoClientId;
 
 	@Value("${oauth.kakao.redirect-uri}")

@@ -19,13 +19,13 @@ import org.springframework.web.client.RestClient;
 @Slf4j
 public class XService {
 
-	@Value("${oauth.X.client-id}")
+	@Value("${oauth.x.client-id}")
 	private String xClientId;
 
-	@Value("${oauth.X.client-secret}")
+	@Value("${oauth.x.client-secret}")
 	private String xClientSecret;
 
-	@Value("${oauth.X.redirect-uri}")
+	@Value("${oauth.x.redirect-uri}")
 	private String xRedirectUri;
 
 	private static final String TOKEN_URI = "https://api.twitter.com/2/oauth2/token";
@@ -73,7 +73,7 @@ public class XService {
 				return profileResponse.getData();
 			}
 
-			return null;
+			throw new RuntimeException("X로 부터 프로필을 받지 못하였습니다.");
 		} catch (Exception e) {
 			log.error("Failed to get X profile: ", e);
 			throw new RuntimeException("Failed to fetch X profile.", e);
