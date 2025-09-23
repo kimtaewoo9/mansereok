@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ManseryeokService {
+public class PostellerService {
 
 	private final PersonalInfoRepository personalInfoRepository;
 
