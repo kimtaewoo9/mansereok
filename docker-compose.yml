@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
-  postgres:
-    image: postgres:15
-    container_name: mansereok-postgres
+  db:
+    container_name: db
+    image: postgres:latest
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: root
@@ -11,5 +9,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    restart: unless-stopped
+      - ./mysql/sqls/manses.sql:/docker-entrypoint-initdb.d/manses.sql
+      - db-data:/var/lib/postgresql/data
+volumes:
+  db-data:
