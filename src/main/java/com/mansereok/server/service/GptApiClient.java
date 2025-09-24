@@ -3,8 +3,8 @@ package com.mansereok.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mansereok.server.dto.GptRequest;
 import com.mansereok.server.dto.Message;
+import com.mansereok.server.service.request.Gpt5Request;
 import com.mansereok.server.service.request.ManseryeokCreateRequest;
 import com.mansereok.server.service.response.ChartCreateResponse;
 import com.mansereok.server.service.response.DaeunCreateResponse;
@@ -24,11 +24,9 @@ public class GptApiClient {
 
 	private final RestClient restClient;
 	private final ObjectMapper objectMapper = new ObjectMapper();
-	private final String apiKey;
 
 	public GptApiClient(@Value("${openai.api.key}") String apiKey,
 		@Value("${openai.api.base-url:https://api.openai.com}") String baseUrl) {
-		this.apiKey = apiKey;
 		this.restClient = RestClient.builder()
 			.baseUrl(baseUrl + "/v1")
 			.defaultHeader("Authorization", "Bearer " + apiKey)
@@ -50,18 +48,28 @@ public class GptApiClient {
 				ohaengResponse,
 				request);
 
-			GptRequest gptRequest = new GptRequest(
-				"gpt-4o",
+//			GptRequest gptRequest = new GptRequest(
+//				"gpt-4o",
+//				List.of(
+//					new Message("system",
+//						"당신은 30년 경력의 전문 사주명리학자입니다. 주어진 사주팔자 정보를 바탕으로 정확하고 건설적인 해석을 제공해주세요. 부정적인 내용도 포함하되 극복 방안을 함께 제시하고, 운명론적이기보다는 개인의 노력과 선택의 중요성을 강조해주세요. 부드럽고 친근한 말투를 사용해주세요."),
+//					new Message("user", prompt)
+//				),
+//				2500,
+//				0.7
+//			);
+
+			Gpt5Request gpt5Request = new Gpt5Request(
+				"gpt-5-mini",
 				List.of(
 					new Message("system",
-						"당신은 30년 경력의 전문 사주명리학자입니다. 주어진 사주팔자 정보를 바탕으로 정확하고 건설적인 해석을 제공해주세요. 부정적인 내용도 포함하되 극복 방안을 함께 제시하고, 운명론적이기보다는 개인의 노력과 선택의 중요성을 강조해주세요."),
+						"당신은 30년 경력의 전문 사주명리학자입니다. 주어진 사주팔자 정보를 바탕으로 정확하고 건설적인 해석을 제공해주세요. 부정적인 내용도 포함하되 극복 방안을 함께 제시하고, 운명론적이기보다는 개인의 노력과 선택의 중요성을 강조해주세요. 부드럽고 친근한 말투를 사용해주세요."),
 					new Message("user", prompt)
 				),
-				2500,
-				0.7
+				8000
 			);
 
-			String requestBody = objectMapper.writeValueAsString(gptRequest);
+			String requestBody = objectMapper.writeValueAsString(gpt5Request);
 
 			String gptResponse = restClient.post()
 				.uri("/chat/completions")
@@ -69,7 +77,7 @@ public class GptApiClient {
 				.retrieve()
 				.body(String.class);
 
-			return extractContentFromResponse(gptResponse);
+			return extractContentFromResponseGpt5(gptResponse);
 
 		} catch (JsonProcessingException e) {
 			log.error("JSON 처리 오류: {}", e.getMessage());
@@ -86,6 +94,7 @@ public class GptApiClient {
 		OhaengCreateResponse ohaengResponse,
 		ManseryeokCreateRequest request) {
 
+		// 데이터 추출
 		DaeunCreateResponse.SajuData daeunData = Optional.ofNullable(daeunResponse.getData())
 			.orElseThrow(() -> new IllegalArgumentException("DaeunCreateResponse data is null"));
 		DaeunCreateResponse.DaeunInfo currentDaeun = DaeunCreateResponse.SajuDataUtils.getCurrentDaeun(
@@ -109,208 +118,438 @@ public class GptApiClient {
 
 		StringBuilder prompt = new StringBuilder();
 
-		prompt.append("당신은 30년 경력의 전문 사주명리학자입니다. 주어진 사주팔자 정보를 바탕으로 정확하고 건설적인 해석을 제공해주세요. ");
-		prompt.append("부정적인 내용도 포함하되 극복 방안을 함께 제시하고, 운명론적이기보다는 개인의 노력과 선택의 중요성을 강조해주세요.\n\n");
+		// ===== 시스템 역할 정의 =====
+		prompt.append("### 시스템 역할 정의 ###\n");
+		prompt.append("당신은 30년 이상의 경력을 가진 최고 수준의 사주명리학 전문가입니다.\n");
+		prompt.append("다음 원칙을 반드시 준수하여 분석을 제공하세요:\n");
+		prompt.append("1. 정확성: 주어진 데이터를 기반으로 전통 사주명리학 이론에 충실하게 해석\n");
+		prompt.append("2. 구체성: 추상적 표현을 피하고 실제 생활에 적용 가능한 구체적 조언 제공\n");
+		prompt.append("3. 균형성: 장점과 단점을 균형있게 제시하되, 극복 방안도 함께 제공\n");
+		prompt.append("4. 실용성: 학술적 용어는 쉽게 풀어서 설명하고 실생활에 도움되는 조언 포함\n");
+		prompt.append("5. 개인화: 이 사람만의 고유한 특징을 찾아 맞춤형 해석 제공\n\n");
 
-		prompt.append("다음은 사주팔자 정보입니다.\n\n");
-		prompt.append(String.format("이름: %s, 성별: %s\n", request.getName(), request.getGender()));
-		prompt.append(String.format("생년월일(양력): %s, 출생지역: %s\n", profile.getSunBirth(),
-			profile.getLocation()));
+		// ===== 분석 대상 정보 =====
+		prompt.append("### 분석 대상 기본 정보 ###\n");
+		prompt.append(String.format("이름: %s\n", request.getName()));
+		prompt.append(String.format("성별: %s\n", request.getGender()));
+		prompt.append(String.format("생년월일시(양력): %s\n", profile.getSunBirth()));
+		prompt.append(String.format("출생지역: %s\n", profile.getLocation()));
 		prompt.append(String.format("사주명식: %s\n\n", profile.getSexagenaryCycle()));
 
-		prompt.append("【사주팔자】\n");
-		appendPillarInfo(prompt, "년주", sajuChart.getYearPillar());
-		appendPillarInfo(prompt, "월주", sajuChart.getMonthPillar());
+		// ===== 사주 원국 분석 데이터 =====
+		prompt.append("### 사주 원국(原局) 데이터 ###\n\n");
 
-		// 일주 (일간 강조)
-		prompt.append(String.format("일주: %s%s (일간: %s %s, 오행: %s, 음양: %s)\n",
-			sajuChart.getDayPillar().getCheongan().getName(),
-			sajuChart.getDayPillar().getJiji().getName(),
-			sajuChart.getDayPillar().getCheongan().getName(),
-			sajuChart.getDayPillar().getCheongan().getChinese(),
-			sajuChart.getDayPillar().getCheongan().getOhaeng().getName(),
-			sajuChart.getDayPillar().getCheongan().getEumyang().getName()
-		));
-		appendJijangganInfo(prompt, sajuChart.getDayPillar().getJijangganList());
-		if (sajuChart.getDayPillar().getUnseong() != null) {
-			prompt.append(String.format("  - 운성: %s (%s)\n",
-				sajuChart.getDayPillar().getUnseong().getName(),
-				sajuChart.getDayPillar().getUnseong().getChinese()
+		prompt.append("【사주팔자 구성】\n");
+		appendDetailedPillarInfo(prompt, "년주(年柱)", sajuChart.getYearPillar(), "조상/어린시절/사회적기반");
+		appendDetailedPillarInfo(prompt, "월주(月柱)", sajuChart.getMonthPillar(), "부모/청년기/직업운");
+
+		// 일주 특별 처리 (일간 강조)
+		prompt.append("▶ 일주(日柱) - 나자신/배우자/중년기:\n");
+		if (sajuChart.getDayPillar() != null && sajuChart.getDayPillar().getCheongan() != null) {
+			prompt.append(String.format("  천간(일간): %s%s [핵심정체성]\n",
+				sajuChart.getDayPillar().getCheongan().getName(),
+				sajuChart.getDayPillar().getCheongan().getChinese()
 			));
-		} else {
-			prompt.append("  - 운성: 정보 없음\n");
+			prompt.append(String.format("    - 오행: %s, 음양: %s\n",
+				sajuChart.getDayPillar().getCheongan().getOhaeng().getName(),
+				sajuChart.getDayPillar().getCheongan().getEumyang().getName()
+			));
+			prompt.append(String.format("  지지: %s%s\n",
+				sajuChart.getDayPillar().getJiji().getName(),
+				sajuChart.getDayPillar().getJiji().getChinese()
+			));
+			appendJijangganInfo(prompt, sajuChart.getDayPillar().getJijangganList());
+			if (sajuChart.getDayPillar().getUnseong() != null) {
+				prompt.append(String.format("  운성: %s(%s)\n",
+					sajuChart.getDayPillar().getUnseong().getName(),
+					sajuChart.getDayPillar().getUnseong().getChinese()
+				));
+			}
 		}
 
-		appendPillarInfo(prompt, "시주", sajuChart.getTimePillar());
+		appendDetailedPillarInfo(prompt, "시주(時柱)", sajuChart.getTimePillar(), "자녀/노년기/결실");
 		prompt.append("\n");
 
-		prompt.append("【신살 분석】\n");
+		// ===== 신살 분석 =====
+		prompt.append("【신살(神殺) 분석】\n");
+		prompt.append("※ 길신은 긍정적 영향, 흉신은 주의가 필요한 부분\n");
 		appendSinsalInfo(prompt, "년주", sinsalInfo.getYearSinsal());
 		appendSinsalInfo(prompt, "월주", sinsalInfo.getMonthSinsal());
 		appendSinsalInfo(prompt, "일진", sinsalInfo.getDaySinsal());
 		appendSinsalInfo(prompt, "시진", sinsalInfo.getTimeSinsal());
 		prompt.append("\n");
 
-		prompt.append("【오행 분석】\n");
+		// ===== 오행 분석 =====
+		prompt.append("【오행(五行) 세력 분석】\n");
+		prompt.append("※ 균형점은 20%, 과다는 35% 이상, 부족은 10% 이하\n");
 		if (ohaengElements != null && !ohaengElements.isEmpty()) {
+			// 일간의 오행 찾기
+			String ilganOhaeng = sajuChart.getDayPillar() != null &&
+				sajuChart.getDayPillar().getCheongan() != null ?
+				sajuChart.getDayPillar().getCheongan().getOhaeng().getName() : "";
+
 			for (OhaengCreateResponse.AnalysisData.ElementInfo ohaengInfo : ohaengElements) {
-				prompt.append(String.format("- %s: %.1f점 (%.1f%%) - %s\n",
+				String marker =
+					ohaengInfo.getElement().getName().equals(ilganOhaeng) ? " [일간]" : "";
+				prompt.append(String.format("%s%s: %.1f점 (%.1f%%) - %s\n",
 					ohaengInfo.getElement().getName(),
+					marker,
 					ohaengInfo.getPoint(),
 					ohaengInfo.getPercent(),
 					ohaengInfo.getDescription()
 				));
 			}
-			prompt.append("\n");
-		} else {
-			prompt.append("- 오행 분석 정보가 없습니다.\n");
-		}
 
-		prompt.append("【십성 분석】\n");
+			// 오행 균형 분석
+			prompt.append("\n▶ 오행 균형 진단:\n");
+			analyzeOhaengBalance(prompt, ohaengElements, ilganOhaeng);
+		}
+		prompt.append("\n");
+
+		// ===== 십성 분석 =====
+		prompt.append("【십성(十星) 분포 분석】\n");
+		prompt.append("※ 십성은 사회적 역할과 심리적 특성을 나타냄\n");
 		if (sipseongElements != null && !sipseongElements.isEmpty()) {
 			for (OhaengCreateResponse.AnalysisData.ElementInfo sipseongInfo : sipseongElements) {
-				prompt.append(String.format("- %s: %.1f점 (%.1f%%) - %s\n",
+				prompt.append(String.format("%s: %.1f점 (%.1f%%) - %s\n",
 					sipseongInfo.getElement().getName(),
 					sipseongInfo.getPoint(),
 					sipseongInfo.getPercent(),
 					sipseongInfo.getDescription()
 				));
 			}
-			prompt.append("\n");
-		} else {
-			prompt.append("- 십성 분석 정보가 없습니다.\n");
-		}
 
-		prompt.append("【현재 대운 정보】\n");
-		prompt.append("- 대운수: ").append(daeunData.getDaeunNumber()).append("\n");
-		prompt.append("- 대운 간지: ").append(daeunData.getDaeunGanji()).append("\n");
+			// 십성 특징 분석
+			prompt.append("\n▶ 십성 특징 진단:\n");
+			analyzeSipseongPattern(prompt, sipseongElements);
+		}
+		prompt.append("\n");
+
+		// ===== 운세 분석 =====
+		prompt.append("### 운세 흐름 데이터 ###\n\n");
+
+		// 현재 대운
+		prompt.append("【현재 대운(大運) 정보】\n");
+		prompt.append(String.format("대운수: %d\n", daeunData.getDaeunNumber()));
+		prompt.append(String.format("대운 간지: %s\n", daeunData.getDaeunGanji()));
 		if (currentDaeun != null && currentDaeun.getGanji() != null) {
-			prompt.append("- 현재 대운 (").append(currentDaeun.getAge()).append("세): ")
-				.append(DaeunCreateResponse.SajuDataUtils.getGanjiString(currentDaeun.getGanji()))
-				.append(" (").append(currentDaeun.getGanji().getUnseong().getName()).append(")\n");
-			prompt.append("  - 천간: ").append(currentDaeun.getGanji().getCheongan().getName())
-				.append(" (").append(currentDaeun.getGanji().getCheongan().getChinese())
-				.append("), 오행: ")
-				.append(currentDaeun.getGanji().getCheongan().getOhaeng().getName())
-				.append(", 십성: ")
-				.append(currentDaeun.getGanji().getCheongan().getSipseong().getName())
-				.append(", 음양: ")
-				.append(currentDaeun.getGanji().getCheongan().getEumyang().getName()).append("\n");
-			prompt.append("  - 지지: ").append(currentDaeun.getGanji().getJiji().getName())
-				.append(" (").append(currentDaeun.getGanji().getJiji().getChinese())
-				.append("), 오행: ").append(currentDaeun.getGanji().getJiji().getOhaeng().getName())
-				.append(", 십성: ").append(currentDaeun.getGanji().getJiji().getSipseong().getName())
-				.append(", 음양: ").append(currentDaeun.getGanji().getJiji().getEumyang().getName())
-				.append("\n");
-			appendJijangganInfo(prompt, currentDaeun.getGanji().getJijangganList());
-		}
-		prompt.append("\n");
-
-		if (currentYear != null && currentYear.getGanji() != null) {
-			prompt.append("【현재 연운 (").append(currentYear.getYear()).append("년)】\n");
-			prompt.append("- 간지: ").append(
-					DaeunCreateResponse.SajuDataUtils.getGanjiString(currentYear.getGanji()))
-				.append("\n");
-			prompt.append("- 천간 십성: ")
-				.append(currentYear.getGanji().getCheongan().getSipseong().getName()).append("\n");
-			prompt.append("- 지지 운성: ").append(currentYear.getGanji().getUnseong().getName())
-				.append("\n");
-			appendJijangganInfo(prompt, currentYear.getGanji().getJijangganList());
-			prompt.append("\n");
-		}
-
-		if (currentMonth != null && currentMonth.getGanji() != null) {
-			prompt.append("【현재 월운 (").append(currentMonth.getMonth()).append("월)】\n");
-			prompt.append("- 간지: ").append(
-					DaeunCreateResponse.SajuDataUtils.getGanjiString(currentMonth.getGanji()))
-				.append("\n");
-			prompt.append("- 천간 십성: ")
-				.append(currentMonth.getGanji().getCheongan().getSipseong().getName()).append("\n");
-			prompt.append("- 지지 운성: ").append(currentMonth.getGanji().getUnseong().getName())
-				.append("\n");
-			appendJijangganInfo(prompt, currentMonth.getGanji().getJijangganList());
-			prompt.append("\n");
-		}
-
-		prompt.append("【주요 대운 흐름 (총 ").append(daeunData.getDaeunList().size()).append("개 대운)】\n");
-		daeunData.getDaeunList().forEach(daeun -> {
-			if (daeun != null && daeun.getGanji() != null) {
-				prompt.append("- ").append(daeun.getAge()).append("세 (").append(daeun.getYear())
-					.append("년): ")
-					.append(DaeunCreateResponse.SajuDataUtils.getGanjiString(daeun.getGanji()))
-					.append(" (").append(daeun.getGanji().getUnseong().getName()).append(")\n");
+			prompt.append(String.format("현재 대운 (%d세~%d세): %s (%s)\n",
+				currentDaeun.getAge(), currentDaeun.getAge() + 9,
+				DaeunCreateResponse.SajuDataUtils.getGanjiString(currentDaeun.getGanji()),
+				currentDaeun.getGanji().getUnseong() != null ? currentDaeun.getGanji().getUnseong()
+					.getName() : ""
+			));
+			prompt.append("▶ 대운 해석 포인트:\n");
+			if (currentDaeun.getGanji().getCheongan() != null) {
+				prompt.append(String.format("  - 천간 %s: %s계열로 %s적 특성 강화\n",
+					currentDaeun.getGanji().getCheongan().getName(),
+					currentDaeun.getGanji().getCheongan().getOhaeng().getName(),
+					currentDaeun.getGanji().getCheongan().getSipseong() != null ?
+						currentDaeun.getGanji().getCheongan().getSipseong().getName() : ""
+				));
 			}
-		});
+			if (currentDaeun.getGanji().getJiji() != null) {
+				prompt.append(String.format("  - 지지 %s: %s의 기운으로 %s 운세\n",
+					currentDaeun.getGanji().getJiji().getName(),
+					currentDaeun.getGanji().getJiji().getOhaeng().getName(),
+					currentDaeun.getGanji().getUnseong() != null ?
+						currentDaeun.getGanji().getUnseong().getName() : ""
+				));
+			}
+		}
 		prompt.append("\n");
 
-		prompt.append("위 정보를 바탕으로 다음 5개 항목에 대해 상세히 해석해주세요:\n\n");
-		prompt.append("## 1. 성격 및 기본 성향 (일간, 사주팔자 오행 및 십성 특징 포함)\n");
-		prompt.append("## 2. 현재 대운의 특징과 기회 (현재 대운 간지, 십성, 운성 및 주요 신살 영향)\n");
-		prompt.append("## 3. 현재 시기 운세 (올해/이번달 연운/월운의 간지, 십성, 운성 영향)\n");
-		prompt.append("## 4. 인생 전반적 흐름과 전망 (전체 대운 흐름, 사주 원국의 강약, 용신/희신 추론)\n");
-		prompt.append("## 5. 실용적 조언 및 개선 방안 (오행의 균형, 십성의 활용, 신살의 길흉 조절 방안)\n\n");
-		prompt.append(
-			"각 항목을 명확히 구분하여 작성하고, 사주명리학적 용어를 적절히 사용하되 일반인이 이해하기 쉽게 설명해주세요. 구체적이고 실용적인 조언을 포함해주세요.");
+		// 연운
+		if (currentYear != null && currentYear.getGanji() != null) {
+			prompt.append(String.format("【%d년 연운(年運)】\n", currentYear.getYear()));
+			prompt.append(String.format("간지: %s\n",
+				DaeunCreateResponse.SajuDataUtils.getGanjiString(currentYear.getGanji())));
+			if (currentYear.getGanji().getCheongan() != null
+				&& currentYear.getGanji().getUnseong() != null) {
+				prompt.append(String.format("핵심 키워드: %s + %s\n",
+					currentYear.getGanji().getCheongan().getSipseong() != null ?
+						currentYear.getGanji().getCheongan().getSipseong().getName() : "",
+					currentYear.getGanji().getUnseong().getName()
+				));
+			}
+			prompt.append("\n");
+		}
+
+		// 월운
+		if (currentMonth != null && currentMonth.getGanji() != null) {
+			prompt.append(String.format("【%d월 월운(月運)】\n", currentMonth.getMonth()));
+			prompt.append(String.format("간지: %s\n",
+				DaeunCreateResponse.SajuDataUtils.getGanjiString(currentMonth.getGanji())));
+			if (currentMonth.getGanji().getUnseong() != null) {
+				prompt.append(String.format("이달의 기운: %s\n",
+					currentMonth.getGanji().getUnseong().getName()
+				));
+			}
+			prompt.append("\n");
+		}
+
+		// 전체 대운 흐름
+		prompt.append("【인생 대운 로드맵】\n");
+		int daeunCount = Math.min(daeunData.getDaeunList().size(), 8); // 최대 8개 대운만
+		for (int i = 0; i < daeunCount; i++) {
+			DaeunCreateResponse.DaeunInfo daeun = daeunData.getDaeunList().get(i);
+			if (daeun != null && daeun.getGanji() != null) {
+				boolean isCurrent = (currentDaeun != null
+					&& daeun.getAge() == currentDaeun.getAge());
+				String marker = isCurrent ? " ◀ 현재" : "";
+				prompt.append(String.format("%d세~%d세: %s (%s)%s\n",
+					daeun.getAge(), daeun.getAge() + 9,
+					DaeunCreateResponse.SajuDataUtils.getGanjiString(daeun.getGanji()),
+					daeun.getGanji().getUnseong() != null ? daeun.getGanji().getUnseong().getName()
+						: "",
+					marker
+				));
+			}
+		}
+		prompt.append("\n");
+
+		// ===== 분석 요청사항 =====
+		prompt.append("### 종합 분석 요청 ###\n\n");
+		prompt.append("위 데이터를 종합하여 아래 11개 항목을 분석해주세요.\n");
+		prompt.append("각 항목당 최소 3-5문장 이상 구체적으로 작성하고,\n");
+		prompt.append("단순 나열이 아닌 인과관계와 상호작용을 설명해주세요.\n\n");
+
+		prompt.append("【분석 시작】\n");
+		prompt.append("먼저 \"[이름]님은 [생년월일] [시각]에 태어나셨습니다.\"로 시작하세요.\n\n");
+
+		prompt.append("## 1. 타고난 성격과 기질 (일간 중심 심층 분석)\n");
+		prompt.append("- 일간의 오행/음양 특성이 성격에 미치는 영향\n");
+		prompt.append("- 월지와의 관계로 본 성격의 발현 양상\n");
+		prompt.append("- 오행 분포가 만드는 성격적 특징\n");
+		prompt.append("- 실제 행동 패턴과 사고방식\n\n");
+
+		prompt.append("## 2. 현재 대운이 가져온 변화와 기회\n");
+		prompt.append("- 원국과 대운의 상호작용 분석\n");
+		prompt.append("- 이 시기에 특별히 발달하는 능력\n");
+		prompt.append("- 주목해야 할 기회와 타이밍\n");
+		prompt.append("- 대운 활용을 위한 구체적 행동 지침\n\n");
+
+		prompt.append("## 3. 올해와 이달의 운세 흐름\n");
+		prompt.append("- 연운이 가져오는 전체적 분위기\n");
+		prompt.append("- 월운의 세부적 영향\n");
+		prompt.append("- 구체적인 시기별 행동 가이드\n");
+		prompt.append("- 피해야 할 시기와 적극적으로 나서야 할 시기\n\n");
+
+		prompt.append("## 4. 인생 전체 흐름과 전환점\n");
+		prompt.append("- 대운별 인생 스토리 전개\n");
+		prompt.append("- 중요한 전환점과 도약의 시기\n");
+		prompt.append("- 용신/기신을 고려한 운의 강약\n");
+		prompt.append("- 노년까지의 장기적 전망\n\n");
+
+		prompt.append("## 5. 성공을 위한 맞춤형 전략\n");
+		prompt.append("- 부족한 오행을 보완하는 구체적 방법\n");
+		prompt.append("- 과다한 오행을 조절하는 실천법\n");
+		prompt.append("- 유리한 방위, 색깔, 숫자, 시간대\n");
+		prompt.append("- 생활 속 실천 가능한 개운법\n\n");
+
+		prompt.append("## 6. 이상형과 연애 스타일\n");
+		prompt.append("- 배우자궁(일지)으로 본 이상형\n");
+		prompt.append("- 끌리는 사람의 구체적 특징\n");
+		prompt.append("- 연애할 때의 행동 패턴\n");
+		prompt.append("- 마음을 여는 조건과 상황\n\n");
+
+		prompt.append("## 7. 연애운과 결혼 시기\n");
+		prompt.append("- 구체적인 인연이 들어올 시기 (년도)\n");
+		prompt.append("- 어떤 배경의 사람을 만날 가능성\n");
+		prompt.append("- 연애/결혼 시 주의사항\n");
+		prompt.append("- 행복한 관계를 위한 조언\n\n");
+
+		prompt.append("## 8. 주의해야 할 함정과 위험\n");
+		prompt.append("- 신살과 충형파해가 만드는 위험 요소\n");
+		prompt.append("- 건강상 취약한 부분\n");
+		prompt.append("- 인간관계에서 조심할 유형\n");
+		prompt.append("- 재물/사업상 리스크 관리법\n\n");
+
+		prompt.append("## 9. 천직과 적성 (구체적 직업 제시)\n");
+		prompt.append("- 십성 분포로 본 직업 적성\n");
+		prompt.append("- 추천 직업 5개 이상 구체적 제시\n");
+		prompt.append("- 피해야 할 직업군과 이유\n");
+		prompt.append("- 성공 가능성이 높은 사업 분야\n\n");
+
+		prompt.append("## 10. 인간관계 패턴과 처세술\n");
+		prompt.append("- 대인관계에서의 강점과 약점\n");
+		prompt.append("- 상사/동료/부하와의 관계 요령\n");
+		prompt.append("- 도움이 되는 사람의 특징\n");
+		prompt.append("- 인맥 확장 전략\n\n");
+
+		prompt.append("## 11. 핵심 장단점과 개선 포인트\n");
+		prompt.append("- 최대 강점 3가지와 활용법\n");
+		prompt.append("- 치명적 약점 3가지와 보완법\n");
+		prompt.append("- 성격 개선을 위한 실천 과제\n");
+		prompt.append("- 인생 성공을 위한 핵심 조언\n\n");
+
+		prompt.append("【주의사항】\n");
+		prompt.append("- 각 항목은 명확히 구분하여 작성\n");
+		prompt.append("- 전문용어는 괄호 안에 쉬운 설명 추가\n");
+		prompt.append("- 부정적 내용도 숨기지 말고 정직하게 전달\n");
+		prompt.append("- 모든 해석은 데이터에 근거하여 논리적으로 설명\n");
+		prompt.append("- 실생활에 즉시 적용 가능한 조언 포함");
 
 		return prompt.toString();
 	}
 
-	// 각 기둥 정보 (천간, 지지, 오행, 음양, 지장간, 운성)를 추가하는 헬퍼 메서드
-	private void appendPillarInfo(StringBuilder prompt, String pillarName,
-		ChartCreateResponse.BasicChartData.Pillar pillar) {
+	// 보조 메서드들
+	private void appendDetailedPillarInfo(StringBuilder prompt, String pillarName,
+		ChartCreateResponse.BasicChartData.Pillar pillar, String meaning) {
+		prompt.append(String.format("▶ %s - %s:\n", pillarName, meaning));
 		if (pillar != null && pillar.getCheongan() != null && pillar.getJiji() != null) {
-			prompt.append(String.format("%s: %s%s (천간: %s %s, 지지: %s %s)\n",
-				pillarName,
+			prompt.append(String.format("  천간: %s%s (오행:%s, 음양:%s",
 				pillar.getCheongan().getName(),
-				pillar.getJiji().getName(),
-				pillar.getCheongan().getName(),
-				pillar.getCheongan().getOhaeng().getName(),
-				pillar.getJiji().getName(),
-				pillar.getJiji().getOhaeng().getName()
+				pillar.getCheongan().getChinese(),
+				pillar.getCheongan().getOhaeng() != null ? pillar.getCheongan().getOhaeng()
+					.getName() : "",
+				pillar.getCheongan().getEumyang() != null ? pillar.getCheongan().getEumyang()
+					.getName() : ""
 			));
+			if (pillar.getCheongan().getSipseong() != null) {
+				prompt.append(
+					String.format(", 십성:%s", pillar.getCheongan().getSipseong().getName()));
+			}
+			prompt.append(")\n");
 
-			// Pillar 클래스에서 지장간 리스트를 직접 가져옵니다.
+			prompt.append(String.format("  지지: %s%s (오행:%s, 음양:%s",
+				pillar.getJiji().getName(),
+				pillar.getJiji().getChinese(),
+				pillar.getJiji().getOhaeng() != null ? pillar.getJiji().getOhaeng().getName() : "",
+				pillar.getJiji().getEumyang() != null ? pillar.getJiji().getEumyang().getName() : ""
+			));
+			if (pillar.getJiji().getSipseong() != null) {
+				prompt.append(String.format(", 십성:%s", pillar.getJiji().getSipseong().getName()));
+			}
+			prompt.append(")\n");
+
 			appendJijangganInfo(prompt, pillar.getJijangganList());
-
-			// Pillar 클래스에서 운성 정보를 직접 가져옵니다.
 			if (pillar.getUnseong() != null) {
-				prompt.append(String.format("  - 운성: %s (%s)\n",
+				prompt.append(String.format("  운성: %s(%s)\n",
 					pillar.getUnseong().getName(),
 					pillar.getUnseong().getChinese()
 				));
-			} else {
-				prompt.append("  - 운성: 정보 없음\n");
 			}
-		} else {
-			prompt.append(String.format("%s: 정보 없음\n", pillarName));
 		}
 	}
 
-	// 지장간 정보를 추가하는 헬퍼 메서드 (공통 JijangganInfo 클래스 사용)
 	private void appendJijangganInfo(StringBuilder prompt, List<JijangganInfo> jijangganList) {
 		if (jijangganList != null && !jijangganList.isEmpty()) {
-			prompt.append("  - 지장간: ");
+			prompt.append("  지장간: ");
 			for (int i = 0; i < jijangganList.size(); i++) {
-				prompt.append(jijangganList.get(i).getName());
-				if (i < jijangganList.size() - 1) {
+				JijangganInfo jijanggan = jijangganList.get(i);
+				if (i > 0) {
 					prompt.append(", ");
 				}
+				prompt.append(jijanggan.getName());
 			}
 			prompt.append("\n");
 		}
 	}
 
-	// 신살 정보를 추가하는 헬퍼 메서드
-	private void appendSinsalInfo(StringBuilder prompt, String pillarName,
+	private void appendSinsalInfo(StringBuilder prompt, String position,
 		ChartCreateResponse.BasicChartData.SinsalElement sinsalElement) {
 		if (sinsalElement != null && sinsalElement.getName() != null && !sinsalElement.getName()
 			.isEmpty()) {
-			prompt.append(String.format("- %s 신살: %s (%s)\n",
-				pillarName,
+			prompt.append(String.format("- %s: %s(%s)\n",
+				position,
 				sinsalElement.getName(),
 				sinsalElement.getChinese()
 			));
 		}
+	}
+
+	private void analyzeOhaengBalance(StringBuilder prompt,
+		List<OhaengCreateResponse.AnalysisData.ElementInfo> ohaengElements, String ilganOhaeng) {
+		// 오행 균형 분석 로직
+		double maxPercent = 0, minPercent = 100;
+		String maxElement = "", minElement = "";
+
+		for (OhaengCreateResponse.AnalysisData.ElementInfo element : ohaengElements) {
+			if (element.getPercent() > maxPercent) {
+				maxPercent = element.getPercent();
+				maxElement = element.getElement().getName();
+			}
+			if (element.getPercent() < minPercent) {
+				minPercent = element.getPercent();
+				minElement = element.getElement().getName();
+			}
+		}
+
+		prompt.append(String.format("  - 가장 강한 오행: %s (%.1f%%) - 과다시 조절 필요\n",
+			maxElement, maxPercent));
+		prompt.append(String.format("  - 가장 약한 오행: %s (%.1f%%) - 보충 필요\n",
+			minElement, minPercent));
+
+		// 일간 강약 판단
+		for (OhaengCreateResponse.AnalysisData.ElementInfo element : ohaengElements) {
+			if (element.getElement().getName().equals(ilganOhaeng)) {
+				if (element.getPercent() > 25) {
+					prompt.append("  - 일간 판단: 신강(身强) - 설기 필요\n");
+				} else if (element.getPercent() < 15) {
+					prompt.append("  - 일간 판단: 신약(身弱) - 부조 필요\n");
+				} else {
+					prompt.append("  - 일간 판단: 중화(中和) - 균형 상태\n");
+				}
+				break;
+			}
+		}
+	}
+
+	private void analyzeSipseongPattern(StringBuilder prompt,
+		List<OhaengCreateResponse.AnalysisData.ElementInfo> sipseongElements) {
+		// 십성 패턴 분석
+		StringBuilder pattern = new StringBuilder();
+		int officerCount = 0; // 관성 계열
+		int wealthCount = 0;  // 재성 계열
+		int academicCount = 0; // 인성 계열
+		int outputCount = 0;   // 식상 계열
+		int peerCount = 0;     // 비겁 계열
+
+		for (OhaengCreateResponse.AnalysisData.ElementInfo element : sipseongElements) {
+			String name = element.getElement().getName();
+			double percent = element.getPercent();
+
+			if (name.contains("관") || name.contains("살")) {
+				officerCount++;
+			} else if (name.contains("재")) {
+				wealthCount++;
+			} else if (name.contains("인")) {
+				academicCount++;
+			} else if (name.contains("식") || name.contains("상")) {
+				outputCount++;
+			} else if (name.contains("비") || name.contains("겁")) {
+				peerCount++;
+			}
+
+			if (percent > 20) {
+				if (pattern.length() > 0) {
+					pattern.append(", ");
+				}
+				pattern.append(name).append(" 우세");
+			}
+		}
+
+		prompt.append("  - 주요 패턴: ").append(pattern.toString()).append("\n");
+		prompt.append("  - 성향 분류: ");
+
+		if (officerCount >= 2) {
+			prompt.append("권력지향형 ");
+		}
+		if (wealthCount >= 2) {
+			prompt.append("재물추구형 ");
+		}
+		if (academicCount >= 2) {
+			prompt.append("학구형 ");
+		}
+		if (outputCount >= 2) {
+			prompt.append("예술창작형 ");
+		}
+		if (peerCount >= 2) {
+			prompt.append("독립자영형 ");
+		}
+
+		prompt.append("\n");
 	}
 
 	private String extractContentFromResponse(String jsonResponse) throws JsonProcessingException {
@@ -324,5 +563,57 @@ public class GptApiClient {
 		}
 		log.error("GPT 응답에서 'content' 필드를 찾을 수 없습니다. 응답: {}", jsonResponse);
 		throw new IllegalArgumentException("GPT 응답 형식이 올바르지 않습니다.");
+	}
+
+	private String extractContentFromResponseGpt5(String jsonResponse)
+		throws JsonProcessingException {
+		if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
+			log.error("GPT 응답이 비어있습니다.");
+			throw new IllegalArgumentException("GPT 응답이 비어있습니다.");
+		}
+
+		try {
+			JsonNode root = objectMapper.readTree(jsonResponse);
+
+			// 에러 응답 확인
+			if (root.has("error")) {
+				JsonNode errorNode = root.get("error");
+				String errorMessage = errorNode.has("message") ?
+					errorNode.get("message").asText() : "알 수 없는 오류";
+				log.error("GPT API 에러: {}", errorMessage);
+				throw new IllegalArgumentException("GPT API 에러: " + errorMessage);
+			}
+
+			// 정상 응답에서 content 추출
+			JsonNode choicesNode = root.path("choices");
+			if (!choicesNode.isArray() || choicesNode.size() == 0) {
+				log.error("응답에 choices 배열이 없음");
+				throw new IllegalArgumentException("GPT 응답에 choices가 없습니다.");
+			}
+
+			JsonNode firstChoice = choicesNode.get(0);
+			JsonNode messageNode = firstChoice.path("message");
+			JsonNode contentNode = messageNode.path("content");
+
+			if (contentNode.isMissingNode() || contentNode.isNull()) {
+				log.error("content 필드가 없습니다.");
+				throw new IllegalArgumentException("GPT 응답에 content 필드가 없습니다.");
+			}
+
+			String content = contentNode.asText();
+
+			// ✅ 수정: content가 null인 경우만 체크 (빈 문자열 체크 제거)
+			if (content == null) {
+				log.error("content가 null입니다.");
+				throw new IllegalArgumentException("GPT가 null 응답을 반환했습니다.");
+			}
+
+			log.info("✅ GPT 응답 성공 - 길이: {} 문자", content.length());
+			return content;
+
+		} catch (JsonProcessingException e) {
+			log.error("JSON 파싱 실패: {}", jsonResponse);
+			throw e;
+		}
 	}
 }

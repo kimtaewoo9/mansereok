@@ -1,5 +1,6 @@
-package com.mansereok.server.dto;
+package com.mansereok.server.service.request;
 
+import com.mansereok.server.dto.Message;
 import java.util.List;
 import lombok.Getter;
 
