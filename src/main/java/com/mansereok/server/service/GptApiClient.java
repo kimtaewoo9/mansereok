@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mansereok.server.dto.Message;
+import com.mansereok.server.service.request.CompatibilityAnalysisRequest;
 import com.mansereok.server.service.request.Gpt5Request;
 import com.mansereok.server.service.request.ManseryeokCreateRequest;
 import com.mansereok.server.service.response.ChartCreateResponse;
@@ -63,7 +64,7 @@ public class GptApiClient {
 				"gpt-5-mini",
 				List.of(
 					new Message("system",
-						"당신은 30년 경력의 전문 사주명리학자입니다. 주어진 사주팔자 정보를 바탕으로 정확하고 건설적인 해석을 제공해주세요. 부정적인 내용도 포함하되 극복 방안을 함께 제시하고, 운명론적이기보다는 개인의 노력과 선택의 중요성을 강조해주세요. 부드럽고 친근한 말투를 사용해주세요."),
+						"당신은 30년 경력의 전문 사주명리학자입니다. 주어진 사주팔자 정보를 바탕으로 정확하고 건설적인 해석을 제공해주세요. 부정적인 내용도 포함하되 극복 방안을 함께 제시하고, 운명론적이기보다는 개인의 노력과 선택의 중요성을 강조해주세요. '해요'체를 사용하여 부드럽고 친근한 말투를 사용해주세요."),
 					new Message("user", prompt)
 				),
 				8000
@@ -312,7 +313,7 @@ public class GptApiClient {
 		prompt.append("### 종합 분석 요청 ###\n\n");
 		prompt.append("위 데이터를 종합하여 아래 11개 항목을 분석해주세요.\n");
 		prompt.append("각 항목당 최소 3-5문장 이상 구체적으로 작성하고,\n");
-		prompt.append("단순 나열이 아닌 인과관계와 상호작용을 설명해주세요.\n\n");
+		prompt.append("해요체를 통해 친절하게 설명해주세요.\n");
 
 		prompt.append("【분석 시작】\n");
 		prompt.append("먼저 \"[이름]님은 [생년월일] [시각]에 태어나셨습니다.\"로 시작하세요.\n\n");
@@ -367,7 +368,7 @@ public class GptApiClient {
 
 		prompt.append("## 9. 천직과 적성 (구체적 직업 제시)\n");
 		prompt.append("- 십성 분포로 본 직업 적성\n");
-		prompt.append("- 추천 직업 5개 이상 구체적 제시\n");
+		prompt.append("- 추천 직업 2~3개 정도만 구체적으로 제시\n");
 		prompt.append("- 피해야 할 직업군과 이유\n");
 		prompt.append("- 성공 가능성이 높은 사업 분야\n\n");
 
@@ -614,6 +615,154 @@ public class GptApiClient {
 		} catch (JsonProcessingException e) {
 			log.error("JSON 파싱 실패: {}", jsonResponse);
 			throw e;
+		}
+	}
+
+	public String analyzeCompatibility(
+		DaeunCreateResponse person1Daeun, ChartCreateResponse person1Chart,
+		OhaengCreateResponse person1Ohaeng, ManseryeokCreateRequest person1Request,
+		DaeunCreateResponse person2Daeun, ChartCreateResponse person2Chart,
+		OhaengCreateResponse person2Ohaeng, ManseryeokCreateRequest person2Request,
+		CompatibilityAnalysisRequest.CompatibilityType compatibilityType
+	) {
+		log.info("✅ 궁합 분석 요청: {} & {}", person1Request.getName(), person2Request.getName());
+		try {
+			String prompt = createCompatibilityPrompt(
+				person1Daeun, person1Chart, person1Ohaeng, person1Request,
+				person2Daeun, person2Chart, person2Ohaeng, person2Request,
+				compatibilityType
+			);
+
+			Gpt5Request gpt5Request = new Gpt5Request(
+				"gpt-5-mini",
+				List.of(
+					new Message("system",
+						"당신은 30년 경력의 전문 사주명리학자입니다. 주어진 사주팔자 정보를 바탕으로 정확하고 건설적인 해석을 제공해주세요. 부정적인 내용도 포함하되 극복 방안을 함께 제시하고, 운명론적이기보다는 개인의 노력과 선택의 중요성을 강조해주세요. '해요'체를 사용하여 부드럽고 친근한 말투를 사용해주세요."),
+					new Message("user", prompt)
+				),
+				8000
+			);
+
+			String requestBody = objectMapper.writeValueAsString(gpt5Request);
+
+			String gptResponse = restClient.post()
+				.uri("/chat/completions")
+				.body(requestBody)
+				.retrieve()
+				.body(String.class);
+
+			return extractContentFromResponse(gptResponse);
+
+		} catch (JsonProcessingException e) {
+			log.error("JSON 처리 오류: {}", e.getMessage());
+			return "궁합 분석 생성 중 데이터 처리 오류가 발생했습니다. 나중에 다시 시도해주세요.";
+		} catch (Exception e) {
+			log.error("GPT API 요청 중 오류: {}", e.getMessage());
+			return "궁합 분석 생성 중 API 요청 오류가 발생했습니다. 나중에 다시 시도해주세요.";
+		}
+	}
+
+	private String createCompatibilityPrompt(
+		DaeunCreateResponse person1Daeun, ChartCreateResponse person1Chart,
+		OhaengCreateResponse person1Ohaeng, ManseryeokCreateRequest person1Request,
+		DaeunCreateResponse person2Daeun, ChartCreateResponse person2Chart,
+		OhaengCreateResponse person2Ohaeng, ManseryeokCreateRequest person2Request,
+		CompatibilityAnalysisRequest.CompatibilityType compatibilityType) {
+
+		StringBuilder prompt = new StringBuilder();
+
+		prompt.append("다음은 두 사람의 사주팔자 궁합 분석 요청입니다.\n\n");
+		prompt.append("궁합 분석 유형: ").append(compatibilityType.getDescription()).append("\n\n");
+
+		// 첫 번째 사람 정보
+		prompt.append("【첫 번째 사람】\n");
+		appendPersonInfo(prompt, person1Chart, person1Ohaeng, person1Request, "1번");
+
+		prompt.append("\n【두 번째 사람】\n");
+		appendPersonInfo(prompt, person2Chart, person2Ohaeng, person2Request, "2번");
+
+		// 궁합 분석 요청사항
+		prompt.append("\n위 두 사람의 사주팔자 정보를 바탕으로 다음 항목들에 대해 상세히 분석해주세요:\n\n");
+
+		prompt.append("## 1. 기본 성격 궁합 분석\n");
+		prompt.append("- 일간(일주 천간) 오행 상생상극 관계\n");
+		prompt.append("- 각자의 성격적 특성과 조화 정도\n");
+		prompt.append("- 서로를 이해하고 받아들일 수 있는 부분\n\n");
+
+		prompt.append("## 2. 오행 균형 및 보완 관계\n");
+		prompt.append("- 각자의 오행 분포와 부족한 오행\n");
+		prompt.append("- 서로의 오행이 보완 관계에 있는지 분석\n");
+		prompt.append("- 함께 있을 때의 에너지 균형\n\n");
+
+		prompt.append("## 3. 십성을 통한 역할 및 관계 역학\n");
+		prompt.append("- 각자의 십성 분포를 통한 성향 분석\n");
+		prompt.append("- 관계에서의 역할 분담과 주도권\n");
+		prompt.append("- 갈등 요소와 해결 방안\n\n");
+
+		prompt.append("## 4. 현재 운세의 궁합\n");
+		prompt.append("- 현재 대운과 연운의 조화\n");
+		prompt.append("- 지금 시기에 만나는 것의 의미\n");
+		prompt.append("- 앞으로의 운세 흐름과 관계 전망\n\n");
+
+		prompt.append("## 5. 실용적 관계 조언\n");
+		prompt.append("- 서로의 장점을 살리고 단점을 보완하는 방법\n");
+		prompt.append("- 갈등이 생겼을 때의 대처법\n");
+		prompt.append("- 관계 발전을 위한 구체적인 실천 방안\n");
+		prompt.append("- 주의해야 할 시기와 상황\n\n");
+
+		prompt.append("각 항목을 명확히 구분하여 작성하고, 사주명리학적 근거를 제시하되 ");
+		prompt.append("일반인이 이해하기 쉽게 설명해주세요. 단순한 점수나 길흉보다는 ");
+		prompt.append("서로를 이해하고 좋은 관계를 만들어가는데 도움이 되는 조언을 중심으로 해주세요.");
+
+		return prompt.toString();
+	}
+
+	private void appendPersonInfo(StringBuilder prompt, ChartCreateResponse chartResponse,
+		OhaengCreateResponse ohaengResponse, ManseryeokCreateRequest request, String personNum) {
+
+		ChartCreateResponse.BasicChartData chartData = chartResponse.getData();
+		ChartCreateResponse.BasicChartData.SajuChart sajuChart = chartData.getSajuChart();
+		ChartCreateResponse.BasicChartData.ProfileInfo profile = chartData.getProfile();
+
+		prompt.append(String.format("이름: %s, 성별: %s\n", request.getName(), request.getGender()));
+		prompt.append(
+			String.format("생년월일: %s, 출생지: %s\n", profile.getSunBirth(), profile.getLocation()));
+		prompt.append(String.format("사주명식: %s\n", profile.getSexagenaryCycle()));
+
+		// 사주팔자
+		prompt.append("사주팔자:\n");
+		prompt.append(String.format("- 년주: %s%s\n",
+			sajuChart.getYearPillar().getCheongan().getName(),
+			sajuChart.getYearPillar().getJiji().getName()));
+		prompt.append(String.format("- 월주: %s%s\n",
+			sajuChart.getMonthPillar().getCheongan().getName(),
+			sajuChart.getMonthPillar().getJiji().getName()));
+		prompt.append(String.format("- 일주: %s%s (일간: %s, 오행: %s)\n",
+			sajuChart.getDayPillar().getCheongan().getName(),
+			sajuChart.getDayPillar().getJiji().getName(),
+			sajuChart.getDayPillar().getCheongan().getName(),
+			sajuChart.getDayPillar().getCheongan().getOhaeng().getName()));
+		prompt.append(String.format("- 시주: %s%s\n",
+			sajuChart.getTimePillar().getCheongan().getName(),
+			sajuChart.getTimePillar().getJiji().getName()));
+
+		// 오행 분포
+		prompt.append("오행 분포:\n");
+		OhaengCreateResponse.AnalysisData analysisData = ohaengResponse.getData();
+		if (analysisData.getOhaeng() != null) {
+			for (OhaengCreateResponse.AnalysisData.ElementInfo ohaeng : analysisData.getOhaeng()) {
+				prompt.append(String.format("- %s: %.1f점 (%.1f%%)\n",
+					ohaeng.getElement().getName(), ohaeng.getPoint(), ohaeng.getPercent()));
+			}
+		}
+
+		// 십성 분포
+		prompt.append("십성 분포:\n");
+		if (analysisData.getSipseong() != null) {
+			for (OhaengCreateResponse.AnalysisData.ElementInfo sipseong : analysisData.getSipseong()) {
+				prompt.append(String.format("- %s: %.1f점 (%.1f%%)\n",
+					sipseong.getElement().getName(), sipseong.getPoint(), sipseong.getPercent()));
+			}
 		}
 	}
 }
