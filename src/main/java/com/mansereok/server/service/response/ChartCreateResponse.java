@@ -54,6 +54,7 @@ public class ChartCreateResponse {
 		@AllArgsConstructor
 		public static class Pillar {
 
+			// 천간 + 지지 -> 일간
 			@JsonProperty("_천간")
 			private Element cheongan;
 

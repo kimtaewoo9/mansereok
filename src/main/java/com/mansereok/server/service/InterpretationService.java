@@ -5,6 +5,7 @@ import com.mansereok.server.repository.PersonalInfoRepository;
 import com.mansereok.server.service.request.CompatibilityAnalysisRequest;
 import com.mansereok.server.service.request.ManseryeokCreateRequest;
 import com.mansereok.server.service.response.ChartCreateResponse;
+import com.mansereok.server.service.response.ChartCreateResponse.BasicChartData.Pillar;
 import com.mansereok.server.service.response.CompatibilityAnalysisResponse;
 import com.mansereok.server.service.response.DaeunCreateResponse;
 import com.mansereok.server.service.response.ManseryeokInterpretationResponse;
@@ -48,8 +49,20 @@ public class InterpretationService {
 			ohaengResponse,
 			request);
 
+		// 일간.. 일주의 천간 + 일주의 오행
+		// 1. 일주 객체 가져오기
+		Pillar dayPillar = chartResponse.getData().getSajuChart().getDayPillar();
+
+		// 2. 일간(천간)의 '이름'과 '오행'의 '이름'을 추출
+		// Pillar -> 천간 -> 오행 -> 이름
+		String cheonganName = dayPillar.getCheongan().getName(); // "임"
+		String ohaengName = dayPillar.getCheongan().getOhaeng().getName(); // "수"
+
+		String ilgan = cheonganName + ohaengName;
+
 		return ManseryeokInterpretationResponse.builder()
 			.personalInfo(savedPersonalInfo)
+			.ilgan(ilgan)
 			.interpretation(interpretation)
 			.build();
 	}

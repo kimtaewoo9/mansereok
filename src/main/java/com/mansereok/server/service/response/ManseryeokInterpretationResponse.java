@@ -9,5 +9,6 @@ import lombok.Data;
 public class ManseryeokInterpretationResponse {
 
 	private PersonalInfo personalInfo;
+	private final String ilgan; // 일간 ex) 임수
 	private String interpretation;
 }
