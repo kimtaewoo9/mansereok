@@ -367,8 +367,10 @@ public class GptApiClient {
 		prompt.append("- 재물/사업상 리스크 관리법\n\n");
 
 		prompt.append("## 9. 천직과 적성 (구체적 직업 제시)\n");
+		prompt.append(
+			"- 사주팔자 원국 외에 지장간에 숨겨진 천간(임성 등)의 역할과 비율을 분석하여 개인의 숨겨진 재능이나 복합적인 성향을 중점적으로 해석해주세요\n");
 		prompt.append("- 십성 분포로 본 직업 적성\n");
-		prompt.append("- 추천 직업 2~3개 정도만 구체적으로 제시\n");
+		prompt.append("- 추천 직업 2개 정도만 구체적으로 제시\n");
 		prompt.append("- 피해야 할 직업군과 이유\n");
 		prompt.append("- 성공 가능성이 높은 사업 분야\n\n");
 
