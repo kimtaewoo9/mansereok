@@ -32,13 +32,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
     // Database
-    implementation 'org.postgresql:postgresql'
-
-    // Kafka
-    implementation 'org.springframework.kafka:spring-kafka'
-
-    // Redis Session
-    implementation 'org.springframework.session:spring-session-data-redis'
+    implementation 'mysql:mysql-connector-java:8.0.33'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'

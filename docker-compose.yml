@@ -1,15 +1,13 @@
 services:
   db:
     container_name: db
-    image: postgres:latest
+    image: mysql:8.0
     environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: mysql
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - ./mysql/sqls/manses.sql:/docker-entrypoint-initdb.d/manses.sql
-      - db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/mysql
 volumes:
   db-data:
