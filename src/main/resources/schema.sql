@@ -32,15 +32,14 @@ CREATE TABLE `users` (
 CREATE TABLE `manses` (
                           `id` BIGINT NOT NULL AUTO_INCREMENT,
 
-    -- solar_date에 UNIQUE 제약조건 추가 (만세력 데이터의 무결성 핵심)
                           `solar_date` DATE NOT NULL UNIQUE,
                           `lunar_date` DATE NOT NULL,
 
-                          `season` VARCHAR(10) DEFAULT NULL,
+                          `season` VARCHAR(10) DEFAULT NULL, -- 절기 데이터
 
-                          `season_start_time` TIMESTAMP NULL DEFAULT NULL,
+                          `season_start_time` DATETIME NULL DEFAULT NULL, -- 절입시간(절기가 시작하는 시작 시간)
 
-                          `leap_month` BOOLEAN DEFAULT NULL, -- BOOLEAN은 MySQL에서 TINYINT(1)로 처리
+                          `leap_month` BOOLEAN DEFAULT NULL,-- 윤달
 
                           `year_sky` VARCHAR(10) DEFAULT NULL,
                           `year_ground` VARCHAR(10) DEFAULT NULL,
