@@ -3,7 +3,7 @@ spring:
     name: mansereok-server
 
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:mysql}
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:mysql}?zeroDateTimeBehavior=CONVERT_TO_NULL
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:root}
 
