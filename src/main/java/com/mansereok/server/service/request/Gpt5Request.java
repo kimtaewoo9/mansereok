@@ -1,20 +1,44 @@
 package com.mansereok.server.service.request;
 
-import com.mansereok.server.dto.Message;
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
 @Getter
 public class Gpt5Request {
 
 	private String model;
-	private List<Message> messages;
-	private int max_completion_tokens;
-	private String reasoning_effort = "medium"; // minimal, low, medium, high (추론 능력 결정)
-
-	public Gpt5Request(String model, List<Message> messages, int max_completion_tokens) {
+	private String input; // ⚠️ 수정: input 문자열을 직접 받음
+	@JsonProperty("max_output_tokens")
+	private int maxOutputTokens;
+	private Reasoning reasoning;
+	private Text text;
+	
+	public Gpt5Request(String model, String input, int maxOutputTokens, String effort,
+		String verbosity) {
 		this.model = model;
-		this.messages = messages;
-		this.max_completion_tokens = max_completion_tokens;
+		this.input = input;
+		this.maxOutputTokens = maxOutputTokens;
+		this.reasoning = new Reasoning(effort);
+		this.text = new Text(verbosity);
+	}
+
+	@Getter
+	public static class Reasoning {
+
+		private String effort; // minimal, low, medium, high
+
+		public Reasoning(String effort) {
+			this.effort = effort;
+		}
+	}
+
+	@Getter
+	public static class Text {
+
+		private String verbosity; // low, medium, high
+
+		public Text(String verbosity) {
+			this.verbosity = verbosity;
+		}
 	}
 }

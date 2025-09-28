@@ -3,7 +3,6 @@ package com.mansereok.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mansereok.server.dto.Message;
 import com.mansereok.server.service.request.CompatibilityAnalysisRequest;
 import com.mansereok.server.service.request.Gpt5Request;
 import com.mansereok.server.service.request.ManseryeokCreateRequest;
@@ -26,6 +25,13 @@ public class GptApiClient {
 	private final RestClient restClient;
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
+	private static final String GPT5_SYSTEM_INSTRUCTION =
+		"--- SYSTEM INSTRUCTION ---\n" +
+			"당신은 30년 경력의 전문 사주명리학자입니다. 주어진 사주팔자 정보를 바탕으로 정확하고 건설적인 해석을 제공해주세요. " +
+			"부정적인 내용도 포함하되 극복 방안을 함께 제시하고, 운명론적이기보다는 개인의 노력과 선택의 중요성을 강조해주세요. " +
+			"'해요'체를 사용하여 부드럽고 친근한 말투를 사용해주세요.\n\n" +
+			"--- USER QUERY ---\n";
+
 	public GptApiClient(@Value("${openai.api.key}") String apiKey,
 		@Value("${openai.api.base-url:https://api.openai.com}") String baseUrl) {
 		this.restClient = RestClient.builder()
@@ -43,7 +49,7 @@ public class GptApiClient {
 	) {
 		log.info("✅ 사주 해석 요청, 요청한 사람: {}", request.getName());
 		try {
-			String prompt = createPrompt(
+			String userPrompt = createPrompt(
 				daeunResponse,
 				chartResponse,
 				ohaengResponse,
@@ -60,24 +66,25 @@ public class GptApiClient {
 //				0.7
 //			);
 
+			String input = GPT5_SYSTEM_INSTRUCTION + userPrompt;
+
 			Gpt5Request gpt5Request = new Gpt5Request(
-				"gpt-5-mini",
-				List.of(
-					new Message("system",
-						"당신은 30년 경력의 전문 사주명리학자입니다. 주어진 사주팔자 정보를 바탕으로 정확하고 건설적인 해석을 제공해주세요. 부정적인 내용도 포함하되 극복 방안을 함께 제시하고, 운명론적이기보다는 개인의 노력과 선택의 중요성을 강조해주세요. '해요'체를 사용하여 부드럽고 친근한 말투를 사용해주세요."),
-					new Message("user", prompt)
-				),
-				8000
+				"gpt-5",
+				input, // ⚠️ String input으로 전달
+				8000,
+				"medium",
+				"medium"
 			);
 
 			String requestBody = objectMapper.writeValueAsString(gpt5Request);
 
 			String gptResponse = restClient.post()
-				.uri("/chat/completions")
+				.uri("/responses") // /v1/responses
 				.body(requestBody)
 				.retrieve()
 				.body(String.class);
 
+			log.info("GPT 응답 결과: {}", gptResponse);
 			return extractContentFromResponseGpt5(gptResponse);
 
 		} catch (JsonProcessingException e) {
@@ -555,67 +562,53 @@ public class GptApiClient {
 		prompt.append("\n");
 	}
 
-	private String extractContentFromResponse(String jsonResponse) throws JsonProcessingException {
-		JsonNode root = objectMapper.readTree(jsonResponse);
-		JsonNode choicesNode = root.path("choices");
-		if (choicesNode.isArray() && choicesNode.size() > 0) {
-			JsonNode contentNode = choicesNode.get(0).path("message").path("content");
-			if (contentNode != null) {
-				return contentNode.asText();
-			}
-		}
-		log.error("GPT 응답에서 'content' 필드를 찾을 수 없습니다. 응답: {}", jsonResponse);
-		throw new IllegalArgumentException("GPT 응답 형식이 올바르지 않습니다.");
-	}
-
 	private String extractContentFromResponseGpt5(String jsonResponse)
 		throws JsonProcessingException {
 		if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
-			log.error("GPT 응답이 비어있습니다.");
 			throw new IllegalArgumentException("GPT 응답이 비어있습니다.");
 		}
 
 		try {
 			JsonNode root = objectMapper.readTree(jsonResponse);
 
-			// 에러 응답 확인
-			if (root.has("error")) {
+			if (root.path("error").isObject()) {
 				JsonNode errorNode = root.get("error");
-				String errorMessage = errorNode.has("message") ?
-					errorNode.get("message").asText() : "알 수 없는 오류";
+				String errorMessage = errorNode.path("message").asText("알 수 없는 API 오류");
 				log.error("GPT API 에러: {}", errorMessage);
 				throw new IllegalArgumentException("GPT API 에러: " + errorMessage);
 			}
 
-			// 정상 응답에서 content 추출
-			JsonNode choicesNode = root.path("choices");
-			if (!choicesNode.isArray() || choicesNode.size() == 0) {
-				log.error("응답에 choices 배열이 없음");
-				throw new IllegalArgumentException("GPT 응답에 choices가 없습니다.");
+			JsonNode outputNode = root.path("output");
+			if (!outputNode.isArray()) {
+				log.error("응답에 'output' 배열이 없습니다.");
+				throw new IllegalArgumentException("GPT 응답 형식이 올바르지 않습니다. ('output' 배열 누락)");
 			}
 
-			JsonNode firstChoice = choicesNode.get(0);
-			JsonNode messageNode = firstChoice.path("message");
-			JsonNode contentNode = messageNode.path("content");
+			JsonNode outputTextNode = null;
 
-			if (contentNode.isMissingNode() || contentNode.isNull()) {
-				log.error("content 필드가 없습니다.");
-				throw new IllegalArgumentException("GPT 응답에 content 필드가 없습니다.");
+			for (JsonNode outputItem : outputNode) {
+				if ("message".equals(outputItem.path("type").asText())) {
+					JsonNode contentArray = outputItem.path("content");
+					if (contentArray.isArray() && contentArray.size() > 0) {
+						outputTextNode = contentArray.get(0).path("text");
+						break;
+					}
+				}
 			}
 
-			String content = contentNode.asText();
-
-			// ✅ 수정: content가 null인 경우만 체크 (빈 문자열 체크 제거)
-			if (content == null) {
-				log.error("content가 null입니다.");
-				throw new IllegalArgumentException("GPT가 null 응답을 반환했습니다.");
+			if (outputTextNode == null || outputTextNode.isMissingNode()
+				|| outputTextNode.isNull()) {
+				log.error("GPT 응답에서 최종 'text' 필드를 찾을 수 없습니다. JSON 구조 확인 필요.");
+				throw new IllegalArgumentException("GPT 응답에서 내용 추출 실패.");
 			}
+
+			String content = outputTextNode.asText();
 
 			log.info("✅ GPT 응답 성공 - 길이: {} 문자", content.length());
 			return content;
 
 		} catch (JsonProcessingException e) {
-			log.error("JSON 파싱 실패: {}", jsonResponse);
+			log.error("JSON 파싱 실패: {}", e.getMessage());
 			throw e;
 		}
 	}
@@ -629,31 +622,31 @@ public class GptApiClient {
 	) {
 		log.info("✅ 궁합 분석 요청: {} & {}", person1Request.getName(), person2Request.getName());
 		try {
-			String prompt = createCompatibilityPrompt(
+			String userPrompt = createCompatibilityPrompt(
 				person1Daeun, person1Chart, person1Ohaeng, person1Request,
 				person2Daeun, person2Chart, person2Ohaeng, person2Request,
 				compatibilityType
 			);
 
+			String input = GPT5_SYSTEM_INSTRUCTION + userPrompt;
+
 			Gpt5Request gpt5Request = new Gpt5Request(
-				"gpt-5-mini",
-				List.of(
-					new Message("system",
-						"당신은 30년 경력의 전문 사주명리학자입니다. 주어진 사주팔자 정보를 바탕으로 정확하고 건설적인 해석을 제공해주세요. 부정적인 내용도 포함하되 극복 방안을 함께 제시하고, 운명론적이기보다는 개인의 노력과 선택의 중요성을 강조해주세요. '해요'체를 사용하여 부드럽고 친근한 말투를 사용해주세요."),
-					new Message("user", prompt)
-				),
-				8000
+				"gpt-5",
+				input,
+				10000,
+				"medium",
+				"medium"
 			);
 
 			String requestBody = objectMapper.writeValueAsString(gpt5Request);
 
 			String gptResponse = restClient.post()
-				.uri("/chat/completions")
+				.uri("/responses")
 				.body(requestBody)
 				.retrieve()
 				.body(String.class);
 
-			return extractContentFromResponse(gptResponse);
+			return extractContentFromResponseGpt5(gptResponse);
 
 		} catch (JsonProcessingException e) {
 			log.error("JSON 처리 오류: {}", e.getMessage());
@@ -678,10 +671,10 @@ public class GptApiClient {
 
 		// 첫 번째 사람 정보
 		prompt.append("【첫 번째 사람】\n");
-		appendPersonInfo(prompt, person1Chart, person1Ohaeng, person1Request, "1번");
+		appendPersonInfo(prompt, person1Chart, person1Ohaeng, person1Daeun, person1Request);
 
 		prompt.append("\n【두 번째 사람】\n");
-		appendPersonInfo(prompt, person2Chart, person2Ohaeng, person2Request, "2번");
+		appendPersonInfo(prompt, person2Chart, person2Ohaeng, person2Daeun, person2Request);
 
 		// 궁합 분석 요청사항
 		prompt.append("\n위 두 사람의 사주팔자 정보를 바탕으로 다음 항목들에 대해 상세히 분석해주세요:\n\n");
@@ -703,6 +696,8 @@ public class GptApiClient {
 
 		prompt.append("## 4. 현재 운세의 궁합\n");
 		prompt.append("- 현재 대운과 연운의 조화\n");
+		prompt.append("- 각자의 현재 대운 시기와 특성\n");
+		prompt.append("- 두 사람의 대운 흐름이 조화로운지 분석\n");
 		prompt.append("- 지금 시기에 만나는 것의 의미\n");
 		prompt.append("- 앞으로의 운세 흐름과 관계 전망\n\n");
 
@@ -720,7 +715,8 @@ public class GptApiClient {
 	}
 
 	private void appendPersonInfo(StringBuilder prompt, ChartCreateResponse chartResponse,
-		OhaengCreateResponse ohaengResponse, ManseryeokCreateRequest request, String personNum) {
+		OhaengCreateResponse ohaengResponse, DaeunCreateResponse daeunResponse,
+		ManseryeokCreateRequest request) {
 
 		ChartCreateResponse.BasicChartData chartData = chartResponse.getData();
 		ChartCreateResponse.BasicChartData.SajuChart sajuChart = chartData.getSajuChart();
@@ -766,5 +762,51 @@ public class GptApiClient {
 					sipseong.getElement().getName(), sipseong.getPoint(), sipseong.getPercent()));
 			}
 		}
+
+		// 대운 정보 추가 (createPrompt 메서드 방식 참고)
+		if (daeunResponse != null && daeunResponse.getData() != null) {
+			DaeunCreateResponse.SajuData daeunData = daeunResponse.getData();
+			DaeunCreateResponse.DaeunInfo currentDaeun = DaeunCreateResponse.SajuDataUtils.getCurrentDaeun(
+				daeunData);
+
+			prompt.append("현재 대운:\n");
+			if (currentDaeun != null && currentDaeun.getGanji() != null) {
+				prompt.append(String.format("- %d세~%d세: %s",
+					currentDaeun.getAge(),
+					currentDaeun.getAge() + 9,
+					DaeunCreateResponse.SajuDataUtils.getGanjiString(currentDaeun.getGanji())
+				));
+
+				if (currentDaeun.getGanji().getUnseong() != null) {
+					prompt.append(
+						String.format(" (%s)", currentDaeun.getGanji().getUnseong().getName()));
+				}
+				prompt.append("\n");
+
+				// 천간/지지 상세 정보
+				if (currentDaeun.getGanji().getCheongan() != null) {
+					prompt.append(String.format("  천간: %s (오행:%s",
+						currentDaeun.getGanji().getCheongan().getName(),
+						currentDaeun.getGanji().getCheongan().getOhaeng() != null ?
+							currentDaeun.getGanji().getCheongan().getOhaeng().getName() : ""
+					));
+					if (currentDaeun.getGanji().getCheongan().getSipseong() != null) {
+						prompt.append(String.format(", 십성:%s",
+							currentDaeun.getGanji().getCheongan().getSipseong().getName()));
+					}
+					prompt.append(")\n");
+				}
+
+				if (currentDaeun.getGanji().getJiji() != null) {
+					prompt.append(String.format("  지지: %s (오행:%s)\n",
+						currentDaeun.getGanji().getJiji().getName(),
+						currentDaeun.getGanji().getJiji().getOhaeng() != null ?
+							currentDaeun.getGanji().getJiji().getOhaeng().getName() : ""
+					));
+				}
+			}
+		}
+
+		prompt.append("\n");
 	}
 }
