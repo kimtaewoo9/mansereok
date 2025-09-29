@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ManseryeokCalculationService {
+public class ManseCalculationService {
 
 	private final ManseRepository manseRepository;
 	private final SajuDataService sajuDataService;
