@@ -27,7 +27,7 @@ public class InterpretationController {
 	private final InterpretationService interpretationService;
 
 	@Operation(
-		summary = "사주 해석 생성",
+		summary = "사주 해석 생성(Posteller 만세력)",
 		description = "생년월일시 정보를 입력받아 AI 기반 사주팔자 해석을 제공합니다"
 	)
 	@ApiResponses(value = {

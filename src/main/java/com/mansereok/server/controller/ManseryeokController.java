@@ -28,7 +28,7 @@ public class ManseryeokController {
 	private final ManseInterpretationService manseInterpretationService;
 
 	@Operation(
-		summary = "자체 구현 로직을 통한 만세력 계산"
+		summary = "만세력 계산"
 	)
 	@PostMapping("/api/v1/manseryeok/calculate")
 	public ResponseEntity<ManseryeokCalculationResponse> calculate(
@@ -43,7 +43,7 @@ public class ManseryeokController {
 	}
 
 	@Operation(
-		summary = "자체 구현 만세력 로직을 통한 사주팔자 종합 해석"
+		summary = "만세력 종합 해석"
 	)
 	@PostMapping("/api/v1/manseryeok/interpret")
 	public ResponseEntity<ManseInterpretationResponse> interpret(
@@ -70,7 +70,7 @@ public class ManseryeokController {
 	}
 
 	@Operation(
-		summary = "자체 구현 만세력 로직을 통한 궁합 분석",
+		summary = "궁합 분석",
 		description = "두 사람의 이름과 생년월일시 정보를 받아 AI를 통해 종합적인 궁합을 분석합니다."
 	)
 	@PostMapping("/api/v1/manseryeok/interpret/compatibility")

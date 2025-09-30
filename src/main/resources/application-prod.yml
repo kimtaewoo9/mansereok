@@ -88,11 +88,10 @@ posteller:
 # Swagger (운영 환경에서는 비활성화 권장)
 springdoc:
   api-docs:
-    enabled: ${SWAGGER_ENABLED:false}
+    enabled: true # {SWAGGER_ENABLED:false}
     path: /v3/api-docs
   swagger-ui:
-    enabled: ${SWAGGER_ENABLED:false}
-    path: /swagger-ui.html
+    enabled: true # ${SWAGGER_ENABLED:false}
     operations-sorter: method
     tags-sorter: alpha
   default-consumes-media-type: application/json

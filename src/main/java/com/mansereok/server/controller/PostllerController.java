@@ -26,7 +26,7 @@ public class PostllerController {
 	private final PostellerService postellerService;
 
 	@Operation(
-		summary = "대운 정보 조회",
+		summary = "Posteller 대운 정보 조회",
 		description = "생년월일시를 바탕으로 대운, 연운, 월운 정보를 조회합니다"
 	)
 	@ApiResponses(value = {
@@ -43,7 +43,7 @@ public class PostllerController {
 	}
 
 	@Operation(
-		summary = "사주 기본 차트 조회",
+		summary = "Posteller 사주 기본 차트 조회",
 		description = "사주팔자 기본 구조(연주, 월주, 일주, 시주)를 조회합니다"
 	)
 	@ApiResponses(value = {
@@ -60,7 +60,7 @@ public class PostllerController {
 	}
 
 	@Operation(
-		summary = "오행/십성 분석 조회",
+		summary = "Posteller 오행/십성 분석 조회",
 		description = "오행 분포와 십성 분석 정보를 조회합니다"
 	)
 	@ApiResponses(value = {
