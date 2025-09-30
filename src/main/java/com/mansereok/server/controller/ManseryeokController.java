@@ -53,6 +53,7 @@ public class ManseryeokController {
 		// 1. 만세력 데이터 계산
 		ManseryeokCalculationResponse manse = manseCalculationService.calculate(
 			new ManseryeokCalculationRequest(
+				request.getName(),
 				request.getSolarDate(),
 				request.getSolarTime(),
 				request.getGender(),
@@ -83,6 +84,7 @@ public class ManseryeokController {
 		// 1. 첫 번째 사람의 만세력 데이터 계산
 		ManseryeokCalculationResponse person1Saju = manseCalculationService.calculate(
 			new ManseryeokCalculationRequest(
+				person1.getName(),
 				person1.getSolarDate(),
 				person1.getSolarTime(),
 				person1.getGender(),
@@ -93,6 +95,7 @@ public class ManseryeokController {
 		// 2. 두 번째 사람의 만세력 데이터 계산
 		ManseryeokCalculationResponse person2Saju = manseCalculationService.calculate(
 			new ManseryeokCalculationRequest(
+				person2.getName(),
 				person2.getSolarDate(),
 				person2.getSolarTime(),
 				person2.getGender(),
