@@ -374,9 +374,9 @@ public class ManseInterpretationService {
 			Gpt5Request gpt5Request = new Gpt5Request(
 				"gpt-5",
 				input,
-				10000, // 궁합 분석은 내용이 길 수 있으므로 토큰 수를 넉넉하게 설정
-				"medium",
-				"high" // 상세함을 높게 설정
+				10000,
+				"high",
+				"medium"
 			);
 
 			String requestBody = objectMapper.writeValueAsString(gpt5Request);

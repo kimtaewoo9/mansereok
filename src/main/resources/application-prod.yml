@@ -1,0 +1,147 @@
+spring:
+  application:
+    name: mansereok-server
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+    # HikariCP 설정 (운영 환경 최적화)
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+
+  jpa:
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    hibernate:
+      ddl-auto: validate  # 운영에서는 validate 사용 (절대 update/create 금지!)
+    show-sql: false  # 운영에서는 false
+    properties:
+      hibernate:
+        format_sql: false
+        use_sql_comments: false
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        default_batch_fetch_size: 100
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_OAUTH_CLIENT_ID}
+            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET}
+            scope: openid, email, profile
+            redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI}/login/oauth2/code/google
+            authorization-grant-type: authorization_code
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
+            user-name-attribute: sub
+
+# Custom OAuth 설정
+oauth:
+  google:
+    client-id: ${GOOGLE_OAUTH_CLIENT_ID}
+    client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET}
+    redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI}
+  kakao:
+    client-id: ${KAKAO_OAUTH_CLIENT_ID}
+    redirect-uri: ${KAKAO_OAUTH_REDIRECT_URI}
+  naver:
+    client-id: ${NAVER_OAUTH_CLIENT_ID}
+    client-secret: ${NAVER_OAUTH_CLIENT_SECRET}
+    redirect-uri: ${NAVER_OAUTH_REDIRECT_URI}
+  x:
+    client-id: ${X_OAUTH_CLIENT_ID}
+    client-secret: ${X_OAUTH_CLIENT_SECRET}
+    redirect-uri: ${X_OAUTH_REDIRECT_URI}
+
+# OpenAI API
+openai:
+  api:
+    key: ${OPENAI_API_KEY}
+    base-url: https://api.openai.com
+
+# Gemini API
+gemini:
+  api:
+    key: ${GEMINI_API_KEY}
+    base-url: https://generativelanguage.googleapis.com/v1beta/models
+
+# 만세력 불러올 API
+posteller:
+  api:
+    base-url: https://api.forceteller.com
+
+# Swagger (운영 환경에서는 비활성화 권장)
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+
+# JWT
+app:
+  jwt:
+    secret: ${JWT_SECRET_KEY}
+    access-token-expiration: 1800000      # 30분 (밀리초)
+    refresh-token-expiration: 2592000000  # 30일 (밀리초)
+    issuer: ${JWT_ISSUER:mansereok.com}
+
+# Server 설정
+server:
+  port: 8080
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    connection-timeout: 20000
+    max-connections: 8192
+    accept-count: 100
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+    min-response-size: 1024
+
+# Actuator (헬스체크 및 모니터링)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health"
+  endpoint:
+    health:
+      show-details: always
+
+
+# Logging (운영 환경)
+logging:
+  level:
+    root: INFO
+    com.mansereok: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /app/logs/application.log

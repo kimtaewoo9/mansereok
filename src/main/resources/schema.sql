@@ -4,7 +4,6 @@ DROP TABLE IF EXISTS `personal_info`;
 DROP TABLE IF EXISTS `manses`;
 DROP TABLE IF EXISTS `users`;
 
-
 -- 1. 사용자 정보 테이블 (users)
 CREATE TABLE `users` (
                          `id` BIGINT NOT NULL AUTO_INCREMENT,
