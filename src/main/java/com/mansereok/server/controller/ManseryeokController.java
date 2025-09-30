@@ -82,7 +82,7 @@ public class ManseryeokController {
 		ManseCompatibilityAnalysisRequest.PersonInfo person2 = request.getPerson2();
 
 		// 1. 첫 번째 사람의 만세력 데이터 계산
-		ManseryeokCalculationResponse person1Saju = manseCalculationService.calculate(
+		ManseryeokCalculationResponse person1Response = manseCalculationService.calculate(
 			new ManseryeokCalculationRequest(
 				person1.getName(),
 				person1.getSolarDate(),
@@ -93,7 +93,7 @@ public class ManseryeokController {
 		);
 
 		// 2. 두 번째 사람의 만세력 데이터 계산
-		ManseryeokCalculationResponse person2Saju = manseCalculationService.calculate(
+		ManseryeokCalculationResponse person2Response = manseCalculationService.calculate(
 			new ManseryeokCalculationRequest(
 				person2.getName(),
 				person2.getSolarDate(),
@@ -105,8 +105,8 @@ public class ManseryeokController {
 
 		// 3. 계산된 두 개의 만세력 데이터로 궁합 분석 서비스 호출
 		ManseCompatibilityAnalysisResponse response = manseInterpretationService.analyzeCompatibility(
-			person1.getName(), person1Saju,
-			person2.getName(), person2Saju
+			person1.getName(), person1Response,
+			person2.getName(), person2Response
 		);
 
 		return ResponseEntity.ok(response);

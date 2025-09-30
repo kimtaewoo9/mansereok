@@ -3,12 +3,17 @@ package com.mansereok.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mansereok.server.entity.CompatibilityResult;
+import com.mansereok.server.entity.Result;
+import com.mansereok.server.repository.CompatibilityResultRepository;
+import com.mansereok.server.repository.ResultRepository;
 import com.mansereok.server.service.request.Gpt5Request;
 import com.mansereok.server.service.response.ManseCompatibilityAnalysisResponse;
 import com.mansereok.server.service.response.ManseInterpretationResponse;
 import com.mansereok.server.service.response.ManseryeokCalculationResponse;
 import com.mansereok.server.service.response.ManseryeokCalculationResponse.JijangganElement;
 import com.mansereok.server.service.response.ManseryeokCalculationResponse.PillarElement;
+import com.mansereok.server.service.response.model.GptCompatibilityResponse;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -27,6 +32,9 @@ public class ManseInterpretationService {
 
 	private final RestClient restClient;
 	private final ObjectMapper objectMapper = new ObjectMapper();
+
+	private final ResultRepository resultRepository;
+	private final CompatibilityResultRepository compatibilityResultRepository;
 
 	// 60갑자 순서 정의 (대운 계산용)
 	private static final List<String> HEAVENLY_STEMS = Arrays.asList("甲", "乙", "丙", "丁", "戊",
@@ -50,12 +58,17 @@ public class ManseInterpretationService {
 
 
 	public ManseInterpretationService(@Value("${openai.api.key}") String apiKey,
-		@Value("${openai.api.base-url:https://api.openai.com}") String baseUrl) {
+		@Value("${openai.api.base-url:https://api.openai.com}") String baseUrl,
+		ResultRepository resultRepository,
+		CompatibilityResultRepository compatibilityResultRepository
+	) {
 		this.restClient = RestClient.builder()
 			.baseUrl(baseUrl + "/v1")
 			.defaultHeader("Authorization", "Bearer " + apiKey)
 			.defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
 			.build();
+		this.resultRepository = resultRepository;
+		this.compatibilityResultRepository = compatibilityResultRepository;
 	}
 
 	/**
@@ -101,8 +114,22 @@ public class ManseInterpretationService {
 			log.info("GPT-5 응답 수신 완료.");
 			String interpretationText = extractContentFromResponseGpt5(gptResponse);
 
+			Result savedResult = resultRepository.save(
+				Result.create(
+					null,  // userId - 로그인 기능 없으므로 null
+					name,
+					response.getInput().getSolarDate(),
+					response.getInput().getSolarTime(),
+					response.getInput().getGender(),
+					response.getInput().getIsLunar(),
+					ilgan,
+					interpretationText
+				)
+			);
+
 			// 성공 시, 모든 정보를 담아 DTO를 빌드하여 반환합니다.
 			return new ManseInterpretationResponse(
+				savedResult.getId(),
 				name,
 				ilgan,
 				interpretationText
@@ -112,6 +139,7 @@ public class ManseInterpretationService {
 			log.error("GPT API 요청 중 오류 발생: {}", e.getMessage(), e);
 
 			return new ManseInterpretationResponse(
+				null,
 				name,
 				ilgan,
 				"해석 생성 중 API 요청 오류가 발생했습니다. 서버 로그를 확인해주세요."
@@ -353,28 +381,31 @@ public class ManseInterpretationService {
 	/**
 	 * 두 사람의 만세력 데이터를 바탕으로 GPT-5에게 궁합 분석을 요청합니다.
 	 *
-	 * @param person1Name 첫 번째 사람의 이름
-	 * @param person1Saju 첫 번째 사람의 만세력 데이터
-	 * @param person2Name 두 번째 사람의 이름
-	 * @param person2Saju 두 번째 사람의 만세력 데이터
+	 * @param person1Name     첫 번째 사람의 이름
+	 * @param person1Response 첫 번째 사람의 만세력 데이터
+	 * @param person2Name     두 번째 사람의 이름
+	 * @param person2Response 두 번째 사람의 만세력 데이터
 	 * @return AI가 분석한 궁합 결과가 담긴 응답 DTO
 	 */
 	public ManseCompatibilityAnalysisResponse analyzeCompatibility(
-		String person1Name, ManseryeokCalculationResponse person1Saju,
-		String person2Name, ManseryeokCalculationResponse person2Saju) {
+		String person1Name, ManseryeokCalculationResponse person1Response,
+		String person2Name, ManseryeokCalculationResponse person2Response) {
+
+		String person1Ilgan = extractIlgan(person1Response);
+		String person2Ilgan = extractIlgan(person2Response);
 
 		log.info("✅ 궁합 분석 요청 시작: {} & {}", person1Name, person2Name);
 
 		try {
 			// 궁합 분석을 위한 전용 프롬프트 생성
-			String userPrompt = createCompatibilityPrompt(person1Name, person1Saju, person2Name,
-				person2Saju);
+			String userPrompt = createCompatibilityPrompt(person1Name, person1Response, person2Name,
+				person2Response);
 			String input = GPT5_SYSTEM_INSTRUCTION + userPrompt;
 
 			Gpt5Request gpt5Request = new Gpt5Request(
 				"gpt-5",
 				input,
-				10000,
+				16384,
 				"high",
 				"medium"
 			);
@@ -388,21 +419,49 @@ public class ManseInterpretationService {
 				.retrieve()
 				.body(String.class);
 
-			log.info("GPT-5 궁합 분석 응답 수신 완료.");
-			String analysisText = extractContentFromResponseGpt5(gptResponse);
+			log.info("GPT-5 궁합 분석 응답 수신 완료. GptResponse={}", gptResponse);
+			String interpretation = extractContentFromResponseGpt5(gptResponse);
 
-			return new ManseCompatibilityAnalysisResponse(
-				person1Name,
-				person2Name,
-				analysisText
+			GptCompatibilityResponse gptData = objectMapper.readValue(
+				interpretation,
+				GptCompatibilityResponse.class
 			);
 
+			Integer score = gptData.getScore();
+			String analysisText = gptData.getInterpretation();
+
+			CompatibilityResult savedResult = compatibilityResultRepository.save(
+				CompatibilityResult.create(
+					null, // userId 일단 null로 ..
+					person1Name,
+					person1Ilgan,
+					person2Name,
+					person2Ilgan,
+					score,
+					analysisText
+				)
+			);
+
+			// 5. 저장된 엔티티 정보로 최종 응답 객체를 생성하여 반환
+			return new ManseCompatibilityAnalysisResponse(
+				savedResult.getId(),
+				savedResult.getPerson1Name(),
+				savedResult.getPerson1Ilgan(),
+				savedResult.getPerson2Name(),
+				savedResult.getPerson2Ilgan(),
+				savedResult.getInterpretation(),
+				savedResult.getCompatibilityScore()
+			);
 		} catch (Exception e) {
 			log.error("GPT API 궁합 분석 요청 중 오류 발생: {}", e.getMessage(), e);
 			return new ManseCompatibilityAnalysisResponse(
+				null,
 				person1Name,
+				person1Ilgan,
 				person2Name,
-				"궁합 분석 중 API 요청 오류가 발생했습니다. 서버 로그를 확인해주세요."
+				person2Ilgan,
+				"궁합 분석 중 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+				null
 			);
 		}
 	}
@@ -456,8 +515,38 @@ public class ManseInterpretationService {
 		prompt.append("## 5. 총평\n");
 		prompt.append("- 두 사람의 관계를 한 문장으로 요약하고, 행복한 관계를 위한 핵심 포인트를 강조하며 긍정적으로 마무리해주세요.\n");
 
+		prompt.append("\n\n### 출력 형식 (매우 중요) ###\n");
+		prompt.append("위 모든 분석 내용을 종합하여, 반드시 아래와 같은 JSON 형식으로만 응답해야 합니다.\n");
+		prompt.append("그 어떤 부가적인 설명이나 markdown 감싸기(` ```json `) 없이 순수한 JSON 객체만 출력해주세요.\n\n");
+		prompt.append("{\n");
+		prompt.append("  \"score\": <두 사람의 궁합을 0에서 100 사이의 정수 점수로 표현>,\n");
+		prompt.append("  \"interpretation\": \"<위 1~5번 항목의 분석 내용을 모두 포함한 상세 해설 문자열>\"\n");
+		prompt.append("}\n");
+
 		return prompt.toString();
 	}
+
+	/**
+	 * ManseryeokCalculationResponse에서 일간(日干) 정보를 추출하는 헬퍼 메서드. (예: "임" + "수" -> "임수")
+	 *
+	 * @param response 만세력 계산 결과
+	 * @return 추출된 일간 문자열. 추출 실패 시 "정보 없음"을 반환.
+	 */
+	private String extractIlgan(ManseryeokCalculationResponse response) {
+		// response나 그 안의 객체들이 null일 경우를 대비하여 안전하게 접근합니다.
+		if (response != null && response.getSaju() != null
+			&& response.getSaju().getDaySky() != null) {
+			ManseryeokCalculationResponse.PillarElement daySky = response.getSaju().getDaySky();
+
+			// 일간을 구성하는 핵심 요소(한글, 오행)가 null이 아닌지 한 번 더 확인합니다.
+			if (daySky.getKorean() != null && daySky.getFiveCircle() != null) {
+				return daySky.getKorean() + daySky.getFiveCircle();
+			}
+		}
+		log.warn("일간(Ilgan) 정보를 추출할 수 없습니다. response: {}", response);
+		return "정보 없음"; // 또는 비즈니스 로직에 따라 null이나 빈 문자열 반환
+	}
+
 
 	/**
 	 * 궁합 프롬프트에 한 사람의 사주 정보를 추가하는 헬퍼 메서드입니다.

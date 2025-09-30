@@ -246,7 +246,6 @@ public class ManseCalculationService {
 
 		String timeKey = getTimeJuIndex(time);
 		if (timeKey == null) {
-			log.warn("시간 {}에 해당하는 시주 인덱스를 찾을 수 없습니다", time);
 			return TimePillarResult.builder()
 				.timeSky(null)
 				.timeGround(null)

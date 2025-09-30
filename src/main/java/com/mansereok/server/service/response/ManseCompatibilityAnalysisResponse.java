@@ -9,7 +9,18 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ManseCompatibilityAnalysisResponse {
 
+	private Long resultId;
+
 	private String person1Name;
+
+	private String person1Ilgan;
+
 	private String person2Name;
-	private String analysisResult;
+
+	private String person2Ilgan;
+
+	private String interpretation;
+
+	// TODO: 궁합 점수 카테고리 세분화.
+	private Integer compatibilityScore; // 궁합 점수(0-100)
 }

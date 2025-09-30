@@ -100,8 +100,62 @@ CREATE TABLE `refresh_tokens` (
                                   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 개인 사주 해석 결과 저장 테이블
+CREATE TABLE results
+(
+    -- 기본 키
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
 
--- 5. 인덱스 생성 (검색 성능 최적화)
+    -- 사용자 정보 (Nullable, users 테이블과 관계를 맺을 수 있음)
+    user_id      BIGINT,
+
+    -- 사주 분석 입력 정보
+    name         VARCHAR(100) NOT NULL,
+    solar_date   DATE         NOT NULL,
+    solar_time   TIME         NOT NULL,
+    gender       VARCHAR(10)  NOT NULL, -- "MALE", "FEMALE" 등
+    is_lunar     BOOLEAN      NOT NULL,
+
+    -- 핵심 결과 정보
+    ilgan        VARCHAR(10)  NOT NULL, -- 예: "임수"
+    interpretation TEXT       NOT NULL, -- GPT가 생성한 긴 해석 내용
+
+    -- 메타데이터
+    created_at   DATETIME(6) NOT NULL,
+    updated_at   DATETIME(6),
+
+    -- 검색 성능 향상을 위한 인덱스
+    INDEX        idx_results_user_id (user_id),
+    INDEX        idx_results_saju (name, solar_date, solar_time) -- 이름과 생년월일시로 조회하는 경우
+);
+
+-- 궁합 분석 결과 저장 테이블
+CREATE TABLE compatibility_results
+(
+    -- 기본 키
+    id                   BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    -- 사용자 정보 (Nullable)
+    user_id              BIGINT,
+
+    -- 궁합 분석 대상자 정보
+    person1_name         VARCHAR(100),
+    person1_ilgan        VARCHAR(10),
+    person2_name         VARCHAR(100),
+    person2_ilgan        VARCHAR(10),
+
+    -- 궁합 분석 결과
+    compatibility_score  INT, -- 궁합 점수 (0-100)
+    interpretation       TEXT NOT NULL, -- GPT가 생성한 긴 궁합 분석 내용
+
+    -- 메타데이터
+    created_at           DATETIME(6) NOT NULL,
+
+    -- 인덱스
+    INDEX idx_compatibility_results_user_id (user_id)
+);
+
+-- 인덱스 생성 (검색 성능 최적화)
 CREATE INDEX idx_manses_solar_date ON manses(solar_date);
 CREATE INDEX idx_manses_lunar_date ON manses(lunar_date);
 -- solar_date와 leap_month의 조합은 사용자의 요청대로 유지
