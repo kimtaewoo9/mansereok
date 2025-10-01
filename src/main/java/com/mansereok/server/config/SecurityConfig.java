@@ -4,6 +4,7 @@ import com.mansereok.server.filter.JwtAuthenticationFilter;
 import com.mansereok.server.security.JwtAccessDeniedHandler;
 import com.mansereok.server.security.JwtAuthenticationEntryPoint;
 import java.util.Arrays;
+import java.util.Collections;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +19,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -35,13 +38,14 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
-			.csrf(csrf -> csrf.disable()) // 일단 비활성화 .
-
+//			.csrf(csrf -> csrf.disable())
+//
 			// CSRF 설정
-//			.csrf(csrf -> csrf
-//				.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-//				.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-//			)
+			.csrf(csrf -> csrf
+				.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+				.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+				.ignoringRequestMatchers("/api/auth/sign-in", "/api/auth/sign-up", "/member/**")
+			)
 
 			// CORS 설정 적용
 			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -85,12 +89,14 @@ public class SecurityConfig {
 		CorsConfiguration configuration = new CorsConfiguration();
 
 		// 허용할 도메인 설정
-		configuration.setAllowedOrigins(
-			Arrays.asList(
-				"http://localhost:3000",
-				"https://yourdomain.com" // 도메인 생성 후 변경 예정
-			)
-		);
+//		configuration.setAllowedOrigins(
+//			Arrays.asList(
+//				"http://localhost:3000",
+//				"https://yourdomain.com" // 도메인 생성 후 변경 예정
+//			)
+//		);
+
+		configuration.setAllowedOriginPatterns(Collections.singletonList("*"));
 
 		// 허용할 HTTP 메서드
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

@@ -123,7 +123,7 @@ public class AuthController {
 	 * @param registerRequest 회원가입 요청 정보
 	 * @return 생성된 사용자 정보
 	 */
-	@PostMapping("/api/users")
+	@PostMapping("/api/auth/users")
 	public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest) {
 		try {
 			User user = userService.createUser(
