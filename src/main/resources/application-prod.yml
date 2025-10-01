@@ -144,3 +144,23 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
   file:
     name: /app/logs/application.log
+
+portone:
+  api:
+    secret: ${PORTONE_API_SECRET}
+    base-url: https://api.portone.io
+
+# 결제 관련 설정
+payment:
+  webhook:
+    url: ${PAYMENT_WEBHOOK_URL:https://yourdomain.com/api/payment/webhook}  # 포트원 웹훅 URL
+  test-mode: ${PAYMENT_TEST_MODE:true}  # 테스트 모드 여부
+
+# 상품 가격 설정 (원화)
+product:
+  prices:
+    saju-basic: 10000      # 기본 사주 해석
+    saju-detail: 30000     # 상세 사주 해석
+    compatibility: 20000   # 궁합 분석
+    monthly-pass: 50000    # 월간 이용권
+    yearly-pass: 300000    # 연간 이용권

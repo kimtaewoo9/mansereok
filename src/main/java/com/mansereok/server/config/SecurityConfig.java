@@ -44,7 +44,6 @@ public class SecurityConfig {
 			.csrf(csrf -> csrf
 				.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
 				.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-				.ignoringRequestMatchers("/api/auth/sign-in", "/api/auth/sign-up", "/member/**")
 			)
 
 			// CORS 설정 적용
