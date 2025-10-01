@@ -155,6 +155,15 @@ CREATE TABLE compatibility_results
     INDEX idx_compatibility_results_user_id (user_id)
 );
 
+CREATE TABLE payments (
+                          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                          payment_id VARCHAR(255) NOT NULL UNIQUE,
+                          order_id VARCHAR(255) NOT NULL,
+                          amount BIGINT NOT NULL,
+                          status VARCHAR(255) NOT NULL,
+                          created_at DATETIME(6) NOT NULL
+);
+
 -- 인덱스 생성 (검색 성능 최적화)
 CREATE INDEX idx_manses_solar_date ON manses(solar_date);
 CREATE INDEX idx_manses_lunar_date ON manses(lunar_date);
