@@ -127,7 +127,7 @@ public class AuthController {
 	public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest) {
 		try {
 			User user = userService.createUser(
-				registerRequest.getName(),
+				registerRequest.getEmail(),
 				registerRequest.getEmail(),
 				registerRequest.getPassword(),
 				registerRequest.getRole()
