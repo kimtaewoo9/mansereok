@@ -1,11 +1,12 @@
 package com.mansereok.server.service;
 
-import com.mansereok.server.dto.payment.PaymentCompleteRequest;
-import com.mansereok.server.dto.payment.PortOnePaymentResponse;
+
 import com.mansereok.server.entity.Payment;
 import com.mansereok.server.entity.PaymentStatus;
 import com.mansereok.server.exception.PaymentException;
 import com.mansereok.server.repository.PaymentRepository;
+import com.mansereok.server.service.request.PaymentCompleteRequest;
+import com.mansereok.server.service.response.PortOnePaymentResponse;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
