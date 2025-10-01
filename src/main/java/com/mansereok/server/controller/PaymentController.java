@@ -1,8 +1,8 @@
 package com.mansereok.server.controller;
 
-import com.mansereok.server.dto.payment.PaymentCompleteRequest;
 import com.mansereok.server.entity.Payment;
 import com.mansereok.server.service.PaymentService;
+import com.mansereok.server.service.request.PaymentCompleteRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
