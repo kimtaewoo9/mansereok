@@ -51,7 +51,7 @@ public class PaymentService {
 			// 4. 결제 정보를 우리 DB에 저장
 			Payment payment = Payment.builder()
 				.paymentId(paymentResponse.getId())
-				.orderId(paymentResponse.getOrderId())
+				.orderId(request.getOrderId())
 				.amount(paymentResponse.getAmount().getTotal())
 				.status(status)
 				.build();

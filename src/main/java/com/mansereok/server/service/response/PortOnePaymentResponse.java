@@ -14,8 +14,8 @@ public class PortOnePaymentResponse {
 	private String status;
 	private Amount amount;
 
-	@JsonProperty("orderId") // JSON 필드 이름이 orderId일 경우 매핑
-	private String orderId; // 가맹점 주문 ID (merchantUid)
+	@JsonProperty("merchant_uid")
+	private String merchantUid; // 가맹점 주문 ID
 
 	@Data
 	@NoArgsConstructor
